@@ -295,6 +295,9 @@
       bar.classList.add('hidden'); msg.textContent='';
 
       let teams = await dbMyTeams();
+      // ta bort ev. dubbletter från äldre data
+      teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+
       if (!teams.length){
         const t = await dbCreateTeam('Mitt Team');
         teams = await dbMyTeams();
