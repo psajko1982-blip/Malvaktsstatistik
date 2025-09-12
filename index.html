@@ -422,7 +422,7 @@
 
 
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
-        // 1) Skapa match
+        // Skapa match
         const { data: mData, error: mErr } = await sb
             .from('matches')
             .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
@@ -431,16 +431,19 @@
         if (mErr) throw mErr;
         const matchId = mData.id;
 
-        // 2) Säkerställ att alla koder från UI finns i DB (skapa saknade)
-        const idByCode = await dbGetGoalieMapEnsure(
-            (GOALIES || []).map(g => ({ code: g.code, name: g.name }))
-        );
+        // Hämta målvakter för teamet (INGEN insert här)
+        const { data: gData, error: gErr } = await sb
+            .from('goalies')
+            .select('id, code')
+            .eq('team_id', CURRENT_TEAM_ID);
+        if (gErr) throw gErr;
+        const idByCode = Object.fromEntries((gData || []).map(g => [String(g.code).trim().toUpperCase(), g.id]));
 
-        // 3) Bygg statsrader – endast de som har data
+        // Bygg endast rader som faktiskt har värden
         const rows = (entries || [])
             .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0)
             .map(e => {
-            const gid = idByCode[normCode(e.code)];
+            const gid = idByCode[String(e.code).trim().toUpperCase()];
             if (!gid) throw new Error(`Okänd målvaktkod: ${e.code} (finns inte i teamet)`);
             return {
                 team_id:  CURRENT_TEAM_ID,
@@ -458,6 +461,7 @@
         if (sErr) throw sErr;
         return matchId;
     }
+
 
 
 
