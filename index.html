@@ -395,15 +395,20 @@
 
 
     async function dbLoadGoalies(){
-      const { data, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
-      if (error) throw error;
-      return data || [];
+        const { data, error } = await sb.from('goalies')
+            .select('id,code,name')
+            .eq('team_id', CURRENT_TEAM_ID)
+            .order('code');
+        if (error) throw error;
+        return (data || []).map(g => ({ ...g, code: normCode(g.code) })); // <- normalisera
     }
+
 
     async function dbAddGoalie(code, name){
         const CODE = normCode(code);
         const up = await sb.from('goalies')
-            .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name }, { onConflict: 'team_id,code', ignoreDuplicates: true })
+            .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name },
+                    { onConflict: 'team_id,code', ignoreDuplicates: true })
             .select('id')
             .maybeSingle();
 
@@ -421,6 +426,7 @@
 
 
 
+
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
         // Skapa match
         const { data: mData, error: mErr } = await sb
@@ -431,36 +437,57 @@
         if (mErr) throw mErr;
         const matchId = mData.id;
 
-        // Hämta målvakter för teamet (INGEN insert här)
-        const { data: gData, error: gErr } = await sb
-            .from('goalies')
+        // Endast rader med data
+        const filled = (entries || [])
+            .map(e => ({ ...e, code: normCode(e.code) }))
+            .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
+
+        if (!filled.length) return matchId;
+
+        // Läs aktuella målvakter → idByCode
+        const readMap = async () => {
+            const { data: gData, error } = await sb.from('goalies')
             .select('id, code')
             .eq('team_id', CURRENT_TEAM_ID);
-        if (gErr) throw gErr;
-        const idByCode = Object.fromEntries((gData || []).map(g => [String(g.code).trim().toUpperCase(), g.id]));
+            if (error) throw error;
+            return Object.fromEntries((gData || []).map(g => [normCode(g.code), g.id]));
+        };
+        let idByCode = await readMap();
 
-        // Bygg endast rader som faktiskt har värden
-        const rows = (entries || [])
-            .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0)
-            .map(e => {
-            const gid = idByCode[String(e.code).trim().toUpperCase()];
+        // Skapa ev. saknade målvakter baserat på UI-listan (namn hämtas från GOALIES)
+        const nameByCode = Object.fromEntries((GOALIES || [])
+            .map(g => [normCode(g.code), g.name]));
+
+        const missing = [...new Set(filled
+            .filter(e => !idByCode[e.code])
+            .map(e => e.code))];
+
+        for (const code of missing){
+            const name = nameByCode[code] || code;
+            await dbAddGoalie(code, name); // idempotent
+        }
+
+        // Läs om mappningen (nu ska alla koder ha id)
+        idByCode = await readMap();
+
+        const rows = filled.map(e => {
+            const gid = idByCode[e.code];
             if (!gid) throw new Error(`Okänd målvaktkod: ${e.code} (finns inte i teamet)`);
             return {
-                team_id:  CURRENT_TEAM_ID,
-                match_id: matchId,
-                goalie_id: gid,
-                minutes:  e.minutes|0,
-                saves:    e.saves|0,
-                shots:    e.shots|0,
+            team_id:  CURRENT_TEAM_ID,
+            match_id: matchId,
+            goalie_id: gid,
+            minutes:  e.minutes|0,
+            saves:    e.saves|0,
+            shots:    e.shots|0,
             };
-            });
-
-        if (rows.length === 0) return matchId;
+        });
 
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
         if (sErr) throw sErr;
         return matchId;
     }
+
 
 
 
@@ -703,15 +730,16 @@
       };
 
       $('#btn-add-goalie').onclick = async () => {
-        const code = prompt('Kod (t.ex. LL):')?.trim();
-        const name = prompt('Namn (t.ex. Leo L):')?.trim();
+        const code = normCode(prompt('Kod (t.ex. LL):') || '');
+        const name = (prompt('Namn (t.ex. Leo L):') || '').trim();
         if (!code || !name) return;
         try {
-          await dbAddGoalie(code, name);
-          GOALIES = await dbLoadGoalies();
-          renderGoalieInputs();
-        } catch (e){ showError('add-goalie', e); }
+            await dbAddGoalie(code, name);
+            GOALIES = await dbLoadGoalies();
+            renderGoalieInputs();
+        } catch (e) { showError('add-goalie', e); }
       };
+
 
       $('#add-match').onclick = async () => {
         $('#app-msg').textContent = '';
