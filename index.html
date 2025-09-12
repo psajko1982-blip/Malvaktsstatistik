@@ -3,13 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>MV – Målvaktsstatistik (mobil)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <title>MV – Målvaktsstatistik (Team + RLS)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
     input[type=number]::-webkit-outer-spin-button,
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
@@ -17,152 +15,755 @@
 </head>
 <body class="bg-gray-50">
   <div class="mx-auto max-w-screen-sm p-3 sm:p-4">
-    <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 p-3 border-b">
+    <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
       <h1 class="text-xl font-bold">MV – Målvaktsstatistik</h1>
-      <p class="text-sm text-gray-600">Snabb registrering • Offline (localStorage) • Mobilvänlig</p>
+      <p class="text-sm text-gray-600">Supabase • Team/RLS • E-postinloggning</p>
     </div>
 
-    <div class="rounded-2xl border shadow-sm p-3 mb-4" id="quickform">
-      <div class="flex gap-2">
-        <div class="flex-1">
-          <label class="text-xs text-gray-500">Datum</label>
-          <input id="f-date" type="date" class="w-full rounded-xl border p-2">
-        </div>
-        <div class="flex-1">
-          <label class="text-xs text-gray-500">Motstånd</label>
-          <input id="f-opp" type="text" placeholder="t.ex. Kumla" class="w-full rounded-xl border p-2">
-        </div>
+    <!-- Auth -->
+    <div id="auth" class="rounded-2xl border bg-white p-4 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Logga in</h2>
+        <button id="btn-signout" class="text-sm underline hidden">Logga ut</button>
       </div>
-
-      <div class="mt-2">
-        <label class="text-xs text-gray-500">Resultat</label>
-        <div class="grid grid-cols-3 gap-2 mt-1">
-          <button data-res="V" class="resbtn rounded-xl border py-2 text-sm">Vinst</button>
-          <button data-res="O" class="resbtn rounded-xl border py-2 text-sm">Oavgjort</button>
-          <button data-res="F" class="resbtn rounded-xl border py-2 text-sm">Förlust</button>
+      <div id="auth-forms">
+        <div class="grid gap-2 sm:grid-cols-2">
+          <input id="email" type="email" placeholder="E-post" class="rounded-xl border p-2">
+          <input id="password" type="password" placeholder="Lösenord" class="rounded-xl border p-2">
         </div>
-      </div>
-
-      <div class="mt-3">
-        <div class="flex items-center justify-between mb-1">
-          <label class="text-xs text-gray-500">Målvakter (min / räddningar / skott)</label>
-          <button id="reset-entries" class="text-xs underline">Nollställ</button>
+        <div class="grid grid-cols-2 gap-2 mt-2">
+          <button id="btn-signin" class="rounded-xl border py-2">Logga in</button>
+          <button id="btn-signup" class="rounded-xl border py-2">Skapa konto</button>
         </div>
-        <div id="goalie-grid" class="space-y-2"></div>
+        <div id="auth-msg" class="text-sm text-red-600 mt-2"></div>
       </div>
-
-      <button id="add-match" class="mt-3 w-full rounded-2xl bg-black text-white py-3 font-medium">Lägg till match</button>
+      <div id="whoami" class="text-sm text-gray-600 mt-2 hidden"></div>
     </div>
 
-    <div id="cards" class="grid sm:grid-cols-2 gap-3 mb-4"></div>
-
-    <div class="rounded-2xl border shadow-sm p-3 mb-4">
-      <div class="text-sm text-gray-500">Resultat</div>
-      <div class="grid grid-cols-3 gap-2 mt-2 text-center">
-        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Vinst</div><div id="stat-v" class="text-lg font-semibold">0</div></div>
-        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Oavgjort</div><div id="stat-o" class="text-lg font-semibold">0</div></div>
-        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Förlust</div><div id="stat-f" class="text-lg font-semibold">0</div></div>
+    <!-- Teamkontroll -->
+    <div id="team-bar" class="hidden rounded-2xl border bg-white p-3 shadow-sm mb-4">
+      <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-gray-600">Team:</span>
+          <select id="team-select" class="rounded-xl border p-2 text-sm"></select>
+          <button id="btn-new-team" class="rounded-xl border px-3 py-2 text-sm">Nytt team</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <input id="invite-email" type="email" placeholder="epost@exempel.se" class="rounded-xl border p-2 text-sm">
+          <button id="btn-invite" class="rounded-xl border px-3 py-2 text-sm">Bjud in</button>
+        </div>
       </div>
-      <div class="text-xs text-gray-500 mt-2">Tot. minuter (alla målvakter): <span id="stat-min" class="font-medium text-gray-700">0</span></div>
+      <div id="team-msg" class="text-xs text-red-600 mt-2"></div>
+      <div id="invites-panel" class="text-sm text-gray-700 mt-2 hidden"></div>
     </div>
 
-    <div id="match-list" class="space-y-3 mb-24"></div>
+    <!-- App UI -->
+    <div id="app" class="hidden">
+      <!-- Snabb inmatning -->
+      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="text-xs text-gray-500">Datum</label>
+            <input id="f-date" type="date" class="w-full rounded-xl border p-2">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-gray-500">Motstånd</label>
+            <input id="f-opp" type="text" placeholder="t.ex. Kumla" class="w-full rounded-xl border p-2">
+          </div>
+        </div>
 
-    <div class="fixed bottom-0 left-0 right-0 bg-white border-t p-3">
-      <div class="mx-auto max-w-screen-sm grid grid-cols-4 gap-2">
-        <button id="btn-exp-csv" class="rounded-xl border py-2 text-sm">Export CSV</button>
-        <button id="btn-exp-json" class="rounded-xl border py-2 text-sm">Export JSON</button>
-        <label class="rounded-xl border py-2 text-sm text-center cursor-pointer">
-          <input id="imp-csv" type="file" accept=".csv" class="hidden">Import CSV
-        </label>
-        <label class="rounded-xl border py-2 text-sm text-center cursor-pointer">
-          <input id="imp-json" type="file" accept=".json" class="hidden">Import JSON
-        </label>
+        <div class="mt-2">
+          <label class="text-xs text-gray-500">Resultat</label>
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            <button data-res="V" class="resbtn rounded-xl border py-2 text-sm">Vinst</button>
+            <button data-res="O" class="resbtn rounded-xl border py-2 text-sm">Oavgjort</button>
+            <button data-res="F" class="resbtn rounded-xl border py-2 text-sm">Förlust</button>
+          </div>
+        </div>
+
+        <div class="mt-2">
+          <label class="text-xs text-gray-500">Kommentar</label>
+          <textarea id="f-notes" rows="2" placeholder="t.ex. bra tredje period, PP 2 mål..." class="w-full rounded-xl border p-2"></textarea>
+        </div>
+
+        <div class="mt-3">
+          <div class="flex items-center justify-between mb-1">
+            <label class="text-xs text-gray-500">Målvakter (min / räddningar / skott)</label>
+            <div class="flex gap-2">
+              <button id="btn-add-goalie" class="text-xs underline">Lägg till målvakt</button>
+              <button id="reset-entries" class="text-xs underline">Nollställ</button>
+            </div>
+          </div>
+          <div id="goalie-grid" class="space-y-2"></div>
+        </div>
+
+        <button id="add-match" class="mt-3 w-full rounded-2xl bg-black text-white py-3 font-medium">Lägg till match</button>
+        <div id="app-msg" class="text-sm text-red-600 mt-2"></div>
       </div>
+
+      <!-- Översikt -->
+      <div id="cards" class="grid sm:grid-cols-2 gap-3 mb-4"></div>
+
+      <!-- Resultat-summering -->
+      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
+        <div class="text-sm text-gray-500">Resultat</div>
+        <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Vinst</div><div id="stat-v" class="text-lg font-semibold">0</div></div>
+          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Oavgjort</div><div id="stat-o" class="text-lg font-semibold">0</div></div>
+          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Förlust</div><div id="stat-f" class="text-lg font-semibold">0</div></div>
+        </div>
+        <div class="text-xs text-gray-500 mt-2">Tot. minuter (alla målvakter): <span id="stat-min" class="font-medium text-gray-700">0</span></div>
+      </div>
+
+      <!-- Export / Import -->
+      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
+        <div class="text-sm text-gray-500 mb-2">Exportera / Importera</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button id="btn-exp-json" class="rounded-xl border py-2">Export JSON</button>
+          <button id="btn-exp-csv"  class="rounded-xl border py-2">Export CSV</button>
+          <label class="rounded-xl border py-2 text-center cursor-pointer">
+            <input id="imp-json" type="file" accept=".json" class="hidden">Import JSON
+          </label>
+          <label class="rounded-xl border py-2 text-center cursor-pointer">
+            <input id="imp-csv"  type="file" accept=".csv"  class="hidden">Import CSV
+          </label>
+        </div>
+        <div class="text-xs text-gray-500 mt-2">
+          JSON innehåller målvakter + matcher. CSV är semikolon-separerad (;). Import gör upsert (datum+motstånd) och ersätter stats för matchen.
+        </div>
+      </div>
+
+      <!-- Matcher -->
+      <div id="match-list" class="space-y-3 mb-24"></div>
     </div>
   </div>
 
   <script>
-    const STORAGE_KEY = 'mv_goalie_app_v1';
-    const DEFAULT_GOALIES = [
-      { id: 'LL', name: 'Leo L' },
-      { id: 'IE', name: 'Isac E' },
-      { id: 'EH', name: 'Emil H' },
-      { id: 'LK', name: 'Leo K' },
-    ];
+    // ===== Supabase-konfig: BYT DESSA =====
+    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- byt
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                  // <-- byt
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    const uid = () => Math.random().toString(36).slice(2, 10);
+    // ===== Helpers =====
+    const $ = (s) => document.querySelector(s);
     const today = () => new Date().toISOString().slice(0,10);
+    const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+    const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
+    const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
 
-    let state = { goalies: DEFAULT_GOALIES, matches: [] };
+    function showError(where, err){
+      console.error(where, err);
+      const msg = (err && (err.message || err.details || err.hint)) || String(err);
+      const box = $('#app-msg') || $('#auth-msg') || $('#team-msg');
+      if (box) box.textContent = `[${where}] ${msg}`;
+    }
 
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) state = JSON.parse(raw);
-    } catch {}
+    async function getSessionSafe(timeoutMs = 2000){
+      const timeout = new Promise((_, rej) => setTimeout(()=>rej(new Error('getSession timeout')), timeoutMs));
+      try {
+        const res = await Promise.race([sb.auth.getSession(), timeout]);
+        if (res?.data?.session) return res.data.session;
+      } catch {}
+      const userRes = await sb.auth.getUser();
+      if (userRes?.data?.user){
+        const s = await sb.auth.getSession();
+        return s?.data?.session ?? null;
+      }
+      return null;
+    }
 
-    const el = (sel) => document.querySelector(sel);
-    const grid = el('#goalie-grid');
-    const list = el('#match-list');
+    // ===== Auth UI =====
+    const whoami = $('#whoami');
+    const authForms = $('#auth-forms');
+    const btnSignOut = $('#btn-signout');
 
-    // init form
-    el('#f-date').value = today();
-    let formResult = 'V';
-
-    document.querySelectorAll('.resbtn').forEach(btn => {
-      const setActive = () => {
-        document.querySelectorAll('.resbtn').forEach(b => b.classList.remove('border-black'));
-        btn.classList.add('border-black');
-      };
-      btn.addEventListener('click', () => { formResult = btn.dataset.res; setActive(); });
-      if (btn.dataset.res === 'V') setActive();
+    $('#btn-signup').addEventListener('click', async () => {
+      $('#auth-msg').textContent = '';
+      try {
+        const { error } = await sb.auth.signUp({ email: $('#email').value.trim(), password: $('#password').value });
+        if (error) throw error;
+        $('#auth-msg').textContent = 'Konto skapat. Logga in om du inte redan är inloggad.';
+      } catch (e) { showError('signup', e); }
     });
 
-    function num(v){ const n = Number(String(v||'').replace(',', '.')); return Number.isFinite(n) ? n : 0; }
+    $('#btn-signin').addEventListener('click', async () => {
+      $('#auth-msg').textContent = '';
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+        if (error) throw error;
+      } catch (e) { showError('signin', e); }
+    });
+
+    btnSignOut.addEventListener('click', async () => { await sb.auth.signOut(); });
+
+    let CURRENT_UID = null;
+    let CURRENT_TEAM_ID = null;
+
+    async function boot(){
+      try {
+        const session = await getSessionSafe();
+        if (session?.user?.id){
+          CURRENT_UID = session.user.id;
+          whoami.textContent = `Inloggad som ${session.user.email}`;
+          whoami.classList.remove('hidden');
+          btnSignOut.classList.remove('hidden');
+          authForms.classList.add('hidden');
+          $('#app').classList.remove('hidden');
+          $('#team-bar').classList.remove('hidden');
+
+          await initTeams();  // team först
+          await initApp();    // sedan ladda UI-data
+        } else {
+          CURRENT_UID = null;
+          CURRENT_TEAM_ID = null;
+          whoami.classList.add('hidden');
+          btnSignOut.classList.add('hidden');
+          authForms.classList.remove('hidden');
+          $('#app').classList.add('hidden');
+          $('#team-bar').classList.add('hidden');
+        }
+      } catch (e){ showError('boot', e); }
+    }
+
+    sb.auth.onAuthStateChange((_ev, session) => {
+      CURRENT_UID = session?.user?.id || null;
+      boot();
+    });
+    boot();
+
+    // ===== Team-API =====
+    async function dbMyTeams(){
+      const { data, error } = await sb
+        .from('team_members')
+        .select('team_id, role, teams:team_id ( id, name, owner_id )')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data||[]).map(r => ({ id: r.teams.id, name: r.teams.name, role: r.role, owner_id: r.teams.owner_id }));
+    }
+
+    async function dbCreateTeam(name){
+      // SKICKA owner_id EXPLICIT pga RLS WITH CHECK
+      const { data: t, error: te } = await sb
+        .from('teams')
+        .insert([{ name, owner_id: CURRENT_UID }])   // <= viktigt
+        .select('id, name, owner_id')
+        .single();
+      if (te) throw te;
+
+      const { data:{ user } } = await sb.auth.getUser();
+      const { error: me } = await sb
+        .from('team_members')
+        .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
+      if (me && me.code !== '23505') throw me;
+
+      return t;
+    }
+
+    async function dbInvite(email, team_id){
+      const { data, error } = await sb.from('team_invites').insert([{ team_id, email }]).select('id, email, status, created_at').single();
+      if (error) throw error;
+      return data;
+    }
+
+    async function dbMyInvites(){
+      const { data, error } = await sb
+        .from('team_invites')
+        .select('id, team_id, email, status, created_at, teams:team_id (name)')
+        .eq('status','pending')
+        .order('created_at',{ascending:false});
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function dbAcceptInvite(invite_id){
+      const { data: inv, error: e1 } = await sb.from('team_invites').select('id, team_id, email, status').eq('id', invite_id).single();
+      if (e1) throw e1;
+      const { data:{ user } } = await sb.auth.getUser();
+      const { error: e2 } = await sb.from('team_members').insert([{ team_id: inv.team_id, user_id: user.id, role: 'member' }]);
+      if (e2 && e2.code !== '23505') throw e2;
+      const { error: e3 } = await sb.from('team_invites').update({ status:'accepted' }).eq('id', invite_id);
+      if (e3) throw e3;
+      return true;
+    }
+
+    async function initTeams(){
+      const bar = $('#team-bar');
+      const sel = $('#team-select');
+      const msg = $('#team-msg');
+      bar.classList.add('hidden'); msg.textContent='';
+
+      let teams = await dbMyTeams();
+      if (!teams.length){
+        const t = await dbCreateTeam('Mitt Team');
+        teams = await dbMyTeams();
+      }
+
+      if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
+
+      sel.innerHTML = '';
+      teams.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = `${t.name}${t.role==='owner'?' (ägare)':''}`;
+        if (t.id === CURRENT_TEAM_ID) opt.selected = true;
+        sel.appendChild(opt);
+      });
+
+      sel.onchange = async () => {
+        CURRENT_TEAM_ID = sel.value;
+        try { await refreshAll(); } catch(e){ showError('team-switch', e); }
+      };
+
+      $('#btn-new-team').onclick = async () => {
+        const name = prompt('Teamnamn:')?.trim();
+        if (!name) return;
+        try {
+          const t = await dbCreateTeam(name);
+          CURRENT_TEAM_ID = t.id;
+          await initTeams();
+          await refreshAll();
+        } catch(e){ showError('new-team', e); }
+      };
+
+      $('#btn-invite').onclick = async () => {
+        msg.textContent='';
+        const email = $('#invite-email').value.trim();
+        if (!email) return;
+        try {
+          await dbInvite(email, CURRENT_TEAM_ID);
+          msg.textContent = `Inbjudan skickad till ${email}. Be personen logga in här – de ser och kan acceptera inbjudan.`;
+          $('#invite-email').value='';
+        } catch(e){ showError('invite', e); }
+      };
+
+      const panel = $('#invites-panel');
+      const invites = await dbMyInvites();
+      if (invites.length){
+        panel.classList.remove('hidden');
+        panel.innerHTML = invites.map(i => `
+          <div class="flex items-center justify-between py-1">
+            <div>Inbjuden till <b>${i.teams?.name || 'Team'}</b> (${i.email})</div>
+            <button data-acc="${i.id}" class="rounded-xl border px-3 py-1 text-sm">Acceptera</button>
+          </div>
+        `).join('');
+        panel.querySelectorAll('button[data-acc]').forEach(btn => {
+          btn.onclick = async () => {
+            try {
+              await dbAcceptInvite(btn.dataset.acc);
+              panel.innerHTML = 'Inbjudan accepterad.';
+              await initTeams();
+              await refreshAll();
+            } catch(e){ showError('accept-invite', e); }
+          };
+        });
+      } else { panel.classList.add('hidden'); panel.innerHTML=''; }
+
+      bar.classList.remove('hidden');
+    }
+
+    // ===== DB-funktioner (team-baserade) =====
+    async function dbEnsureDefaultGoalies(){
+      const { data, error } = await sb.from('goalies').select('id').eq('team_id', CURRENT_TEAM_ID).limit(1);
+      if (error) throw error;
+      if (!data || data.length === 0){
+        const rows = [
+          { code:'LL', name:'Leo L' },
+          { code:'IE', name:'Isac E' },
+          { code:'EH', name:'Emil H' },
+          { code:'LK', name:'Leo K' },
+        ].map(x => ({ ...x, team_id: CURRENT_TEAM_ID }));
+        const { error: insErr } = await sb.from('goalies').insert(rows);
+        if (insErr) throw insErr;
+      }
+    }
+
+    async function dbLoadGoalies(){
+      const { data, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
+      if (error) throw error;
+      return data || [];
+    }
+
+    async function dbAddGoalie(code, name){
+      const { data, error } = await sb
+        .from('goalies')
+        .insert([{ team_id: CURRENT_TEAM_ID, code, name }])
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id;
+    }
+
+    async function dbAddMatch({ date, opponent, result, notes, entries }){
+      const { data: mData, error: mErr } = await sb
+        .from('matches')
+        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
+        .select('id')
+        .single();
+      if (mErr) throw mErr;
+      const matchId = mData.id;
+
+      const { data: gData, error: gErr } = await sb
+        .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
+      if (gErr) throw gErr;
+      const idByCode = Object.fromEntries((gData||[]).map(g => [g.code, g.id]));
+
+      const rows = entries.map(e => ({
+        team_id:  CURRENT_TEAM_ID,
+        match_id: matchId,
+        goalie_id: idByCode[e.code],
+        minutes:  e.minutes|0,
+        saves:    e.saves|0,
+        shots:    e.shots|0
+      }));
+      if (rows.length){
+        const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
+        if (sErr) throw sErr;
+      }
+      return matchId;
+    }
+
+    async function dbListMatches(){
+      const { data, error } = await sb
+        .from('matches')
+        .select(`
+          id, date, opponent, result, notes,
+          match_goalie_stats (
+            minutes, saves, shots, goalie_id,
+            goalies:goalie_id ( code, name )
+          )
+        `)
+        .eq('team_id', CURRENT_TEAM_ID)
+        .order('date',{ascending:false});
+      if (error) throw error;
+
+      return (data||[]).map(m => ({
+        id: m.id,
+        date: m.date,
+        opponent: m.opponent,
+        result: m.result,
+        notes: m.notes,
+        entries: (m.match_goalie_stats||[]).map(e => ({
+          code: e.goalies.code,
+          name: e.goalies.name,
+          minutes: e.minutes,
+          saves: e.saves,
+          shots: e.shots
+        }))
+      }));
+    }
+
+    async function dbDeleteMatch(matchId){
+      const { error } = await sb.from('matches').delete().eq('id', matchId).eq('team_id', CURRENT_TEAM_ID);
+      if (error) throw error;
+    }
+
+    // ===== Export / Import =====
+    function download(filename, content, mime){
+      const blob = new Blob([content], {type: (mime || 'text/plain') + ';charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function exportJSON(){
+      const goalies = await dbLoadGoalies();
+      const matches = await dbListMatches();
+      const payload = { exported_at: new Date().toISOString(), team_id: CURRENT_TEAM_ID, goalies, matches };
+      download('mv_export.json', JSON.stringify(payload, null, 2), 'application/json');
+    }
+
+    function escCSV(v){ const s = String(v ?? ''); return /[;"\n]/.test(s) ? '"' + s.replaceAll('"','""') + '"' : s; }
+    function buildCSV(goalies, matches){
+      const head = ['date','opponent','result', ...goalies.flatMap(g=>[`${g.code}_minutes`,`${g.code}_saves`,`${g.code}_shots`]), 'notes'];
+      const lines = [head.join(';')];
+      for (const m of matches){
+        const map = Object.fromEntries((m.entries||[]).map(e => [e.code, e]));
+        const cols = [
+          m.date, escCSV(m.opponent||''), m.result,
+          ...goalies.flatMap(g => { const e = map[g.code]||{}; return [e.minutes??'', e.saves??'', e.shots??'']; }),
+          escCSV(m.notes||'')
+        ];
+        lines.push(cols.join(';'));
+      }
+      return lines.join('\n');
+    }
+
+    async function exportCSV(){
+      const goalies = await dbLoadGoalies();
+      const matches = await dbListMatches();
+      download('mv_export.csv', buildCSV(goalies, matches), 'text/csv');
+    }
+
+    function bindExportButtons(){
+      const j = $('#btn-exp-json'), c = $('#btn-exp-csv');
+      if (j && !j._bound){ j.addEventListener('click', ()=>exportJSON().catch(e=>showError('export-json', e))); j._bound=true; }
+      if (c && !c._bound){ c.addEventListener('click', ()=>exportCSV().catch(e=>showError('export-csv', e)));   c._bound=true; }
+    }
+
+    // ---- Import helpers (goalies map + upsert match) ----
+    async function dbGetGoalieMapEnsure(codesAndNames){
+      const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
+      if (error) throw error;
+      const have = new Map((gData||[]).map(g => [g.code, g]));
+      const missing = (codesAndNames||[]).filter(x => x.code && !have.has(x.code));
+      if (missing.length){
+        const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
+        const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
+        if (e2) throw e2;
+        (ins||[]).forEach(g => have.set(g.code, g));
+      }
+      return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
+    }
+
+    async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
+      let { data: found, error: sErr } = await sb
+        .from('matches')
+        .select('id')
+        .eq('team_id', CURRENT_TEAM_ID)
+        .eq('date', date)
+        .eq('opponent', opponent || '')
+        .limit(1)
+        .maybeSingle();
+      if (sErr && sErr.code !== 'PGRST116') throw sErr;
+      if (found?.id){
+        await sb.from('matches').update({ result, notes }).eq('id', found.id);
+        return found.id;
+      }
+      const { data: ins, error } = await sb
+        .from('matches')
+        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent: opponent||'', result, notes }])
+        .select('id')
+        .single();
+      if (error) throw error;
+      return ins.id;
+    }
+
+    // ---- Import JSON ----
+    async function importJSONFile(file){
+      const text = await file.text();
+      const obj = JSON.parse(text);
+      const goalies = obj.goalies || [];
+      const matches = obj.matches || [];
+
+      const idByCode = await dbGetGoalieMapEnsure(goalies.map(g => ({code:g.code, name:g.name})));
+
+      for (const m of matches){
+        const matchId = await dbFindOrCreateMatchByKey({
+          date: m.date,
+          opponent: m.opponent || '',
+          result: m.result || 'V',
+          notes: m.notes || ''
+        });
+        await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
+        const rows = (m.entries||[]).map(e => ({
+          team_id: CURRENT_TEAM_ID,
+          match_id: matchId,
+          goalie_id: idByCode[e.code],
+          minutes: e.minutes|0,
+          saves:   e.saves|0,
+          shots:   e.shots|0
+        }));
+        if (rows.length){
+          const { error } = await sb.from('match_goalie_stats').insert(rows);
+          if (error) throw error;
+        }
+      }
+    }
+
+    // ---- Import CSV ----
+    function parseCSVLine(line){
+      const out=[]; let cur=''; let inQ=false;
+      for (let i=0;i<line.length;i++){
+        const ch=line[i];
+        if (inQ){
+          if (ch === '"'){ if (line[i+1] === '"'){ cur+='"'; i++; } else { inQ=false; } }
+          else cur += ch;
+        } else {
+          if (ch === '"') inQ=true;
+          else if (ch === ';'){ out.push(cur); cur=''; }
+          else cur += ch;
+        }
+      }
+      out.push(cur); return out;
+    }
+
+    async function importCSVFile(file){
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) throw new Error('CSV saknar data.');
+      const header = lines[0].split(';').map(h=>h.trim());
+      const idx = Object.fromEntries(header.map((h,i)=>[h,i]));
+      const codes = [];
+      for (const h of header){
+        const m = h.match(/^([A-Za-z0-9]+)_(minutes|saves|shots)$/);
+        if (m && !codes.includes(m[1])) codes.push(m[1]);
+      }
+      const idByCode = await dbGetGoalieMapEnsure(codes.map(code => ({code, name: code})));
+
+      for (let li=1; li<lines.length; li++){
+        const cols = parseCSVLine(lines[li]);
+        const date = cols[idx['date']] || today();
+        const opponent = cols[idx['opponent']] || '';
+        const result = cols[idx['result']] || 'V';
+        const notes  = cols[idx['notes']] || '';
+
+        const matchId = await dbFindOrCreateMatchByKey({ date, opponent, result, notes });
+
+        const rows = codes.map(code => ({
+          team_id: CURRENT_TEAM_ID,
+          match_id: matchId,
+          goalie_id: idByCode[code],
+          minutes: Number(cols[idx[`${code}_minutes`]]||0)||0,
+          saves:   Number(cols[idx[`${code}_saves`]]||0)||0,
+          shots:   Number(cols[idx[`${code}_shots`]]||0)||0
+        }));
+        await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
+        const { error } = await sb.from('match_goalie_stats').insert(rows);
+        if (error) throw error;
+      }
+    }
+
+    // ===== App state & UI =====
+    let GOALIES = [];
+    let formResult = 'V';
+
+    async function initApp(){
+      $('#f-date').value = today();
+
+      document.querySelectorAll('.resbtn').forEach(btn => {
+        btn.classList.remove('border-black');
+        if (btn.dataset.res === 'V') btn.classList.add('border-black');
+        btn.onclick = () => {
+          formResult = btn.dataset.res;
+          document.querySelectorAll('.resbtn').forEach(b => b.classList.remove('border-black'));
+          btn.classList.add('border-black');
+        };
+      });
+
+      try {
+        await dbEnsureDefaultGoalies();
+        GOALIES = await dbLoadGoalies();
+        renderGoalieInputs();
+        await refreshAll();
+      } catch (e){ showError('initApp', e); }
+
+      $('#reset-entries').onclick = () => {
+        GOALIES.forEach(g => {
+          $('#m-'+g.code).value='0';
+          $('#s-'+g.code).value='0';
+          $('#t-'+g.code).value='0';
+        });
+      };
+
+      $('#btn-add-goalie').onclick = async () => {
+        const code = prompt('Kod (t.ex. LL):')?.trim();
+        const name = prompt('Namn (t.ex. Leo L):')?.trim();
+        if (!code || !name) return;
+        try {
+          await dbAddGoalie(code, name);
+          GOALIES = await dbLoadGoalies();
+          renderGoalieInputs();
+        } catch (e){ showError('add-goalie', e); }
+      };
+
+      $('#add-match').onclick = async () => {
+        $('#app-msg').textContent = '';
+        const entries = GOALIES.map(g => ({
+          code: g.code,
+          minutes: num($('#m-'+g.code).value),
+          saves:   num($('#s-'+g.code).value),
+          shots:   num($('#t-'+g.code).value),
+        }));
+        try {
+          await dbAddMatch({
+            date: $('#f-date').value || today(),
+            opponent: $('#f-opp').value || '',
+            result: formResult,
+            notes: $('#f-notes').value || '',
+            entries
+          });
+          document.querySelectorAll('#goalie-grid input').forEach(i => i.value='0');
+          $('#f-opp').value=''; $('#f-notes').value='';
+          await refreshAll();
+        } catch (e){ showError('add-match', e); }
+      };
+
+      // Export/Import-bindningar
+      bindExportButtons();
+      const impJ = $('#imp-json');
+      const impC = $('#imp-csv');
+      if (impJ && !impJ._bound){
+        impJ.addEventListener('change', async (e)=>{
+          $('#app-msg').textContent='';
+          try {
+            const f = e.target.files?.[0]; if (!f) return;
+            await importJSONFile(f);
+            await refreshAll();
+          } catch (err){ showError('import-json', err); }
+          finally { e.target.value=''; }
+        });
+        impJ._bound=true;
+      }
+      if (impC && !impC._bound){
+        impC.addEventListener('change', async (e)=>{
+          $('#app-msg').textContent='';
+          try {
+            const f = e.target.files?.[0]; if (!f) return;
+            await importCSVFile(f);
+            await refreshAll();
+          } catch (err){ showError('import-csv', err); }
+          finally { e.target.value=''; }
+        });
+        impC._bound=true;
+      }
+    }
 
     function renderGoalieInputs(){
-      grid.innerHTML='';
-      state.goalies.forEach(g => {
+      const grid = $('#goalie-grid');
+      grid.innerHTML = '';
+      GOALIES.forEach(g => {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-12 items-center gap-2';
         row.innerHTML = `
           <div class="col-span-4">
             <div class="font-medium text-sm">${g.name}</div>
-            <div class="text-xs text-gray-500">${g.id}</div>
+            <div class="text-xs text-gray-500">${g.code}</div>
           </div>
-          <input id="m-${g.id}" inputmode="numeric" class="col-span-2 rounded-xl border p-2 text-center" placeholder="min" value="0" />
-          <input id="s-${g.id}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="räddn" value="0" />
-          <input id="t-${g.id}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="skott" value="0" />
+          <input id="m-${g.code}" inputmode="numeric" class="col-span-2 rounded-xl border p-2 text-center" placeholder="min" value="0" />
+          <input id="s-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="räddn" value="0" />
+          <input id="t-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="skott" value="0" />
         `;
         grid.appendChild(row);
       });
     }
 
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    async function refreshAll(){
+      try {
+        const matches = await dbListMatches();
+        renderCards(matches);
+        renderResultSummary(matches);
+        renderMatchList(matches);
+      } catch (e){ showError('refresh-all', e); }
+    }
 
-    function pct(saves, shots){ return shots > 0 ? saves/shots : null; }
-    function sum(arr){ return arr.reduce((a,v)=>a+(Number.isFinite(v)?v:0), 0); }
-
-    function renderCards(){
-      const wrap = document.getElementById('cards');
-      wrap.innerHTML='';
-      state.goalies.forEach(g => {
-        const all = state.matches.flatMap(m => m.entries.filter(e=>e.goalieId===g.id));
-        const minutes = sum(all.map(e=>e.minutes));
-        const saves = sum(all.map(e=>e.saves));
-        const shots = sum(all.map(e=>e.shots));
-        const p = pct(saves, shots);
+    function renderCards(matches){
+      const wrap = $('#cards'); wrap.innerHTML='';
+      GOALIES.forEach(g => {
+        const all = matches.flatMap(m => m.entries.filter(e => e.code === g.code));
+        const minutes = sum(all.map(e => e.minutes));
+        const saves   = sum(all.map(e => e.saves));
+        const shots   = sum(all.map(e => e.shots));
         const card = document.createElement('div');
-        card.className = 'rounded-2xl border shadow-sm p-3';
+        card.className = 'rounded-2xl border shadow-sm p-3 bg-white';
         card.innerHTML = `
           <div class="flex items-center justify-between">
             <div>
               <div class="text-sm text-gray-500">Målvakt</div>
-              <div class="text-lg font-semibold">${g.name} <span class="text-sm text-gray-500">(${g.id})</span></div>
+              <div class="text-lg font-semibold">${g.name} <span class="text-sm text-gray-500">(${g.code})</span></div>
             </div>
             <div class="text-right">
               <div class="text-sm text-gray-500">Rädd%</div>
-              <div class="text-xl font-bold">${p===null? '–' : (p*100).toFixed(2)+'%'}</div>
+              <div class="text-xl font-bold">${pct(saves, shots)}</div>
             </div>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
@@ -175,31 +776,31 @@
       });
     }
 
-    function renderResultSummary(){
-      const v = state.matches.filter((m) => m.result === "V").length;
-      const o = state.matches.filter((m) => m.result === "O").length;
-      const f = state.matches.filter((m) => m.result === "F").length;
-      document.getElementById('stat-v').textContent = v;
-      document.getElementById('stat-o').textContent = o;
-      document.getElementById('stat-f').textContent = f;
-      const minutesTotal = state.goalies.map(g=>
-        state.matches.flatMap(m=>m.entries.filter(e=>e.goalieId===g.id)).reduce((a,e)=>a+e.minutes,0)
-      ).reduce((a,b)=>a+b,0);
-      document.getElementById('stat-min').textContent = minutesTotal;
+    function renderResultSummary(matches){
+      const v = matches.filter(m => m.result === 'V').length;
+      const o = matches.filter(m => m.result === 'O').length;
+      const f = matches.filter(m => m.result === 'F').length;
+      $('#stat-v').textContent = v;
+      $('#stat-o').textContent = o;
+      $('#stat-f').textContent = f;
+      const minutesTotal = GOALIES
+        .map(g => matches.flatMap(m => m.entries.filter(e => e.code===g.code)).reduce((a,e)=>a+e.minutes,0))
+        .reduce((a,b)=>a+b,0);
+      $('#stat-min').textContent = minutesTotal;
     }
 
-    function renderMatchList(){
-      list.innerHTML='';
-      if (!state.matches.length){
+    function renderMatchList(matches){
+      const list = $('#match-list'); list.innerHTML='';
+      if (!matches.length){
         const empty = document.createElement('div');
         empty.className='text-center text-sm text-gray-500';
         empty.textContent='Inga matcher ännu. Lägg till första ovan.';
         list.appendChild(empty);
         return;
       }
-      state.matches.forEach(m => {
+      matches.forEach(m => {
         const box = document.createElement('div');
-        box.className='rounded-2xl border shadow-sm';
+        box.className='rounded-2xl border shadow-sm bg-white';
         const header = document.createElement('div');
         header.className='flex items-center justify-between p-3';
         header.innerHTML = `
@@ -209,132 +810,39 @@
           </div>
           <button class="text-xs underline">Ta bort</button>
         `;
-        header.querySelector('button').addEventListener('click', ()=>{
-          state.matches = state.matches.filter(x=>x.id!==m.id); save(); redraw();
+        header.querySelector('button').addEventListener('click', async ()=>{
+          try { await dbDeleteMatch(m.id); await refreshAll(); } catch(e){ showError('delete-match', e); }
         });
+
+        if (m.notes && m.notes.trim()){
+          const notes = document.createElement('div');
+          notes.className = 'px-3 pb-2 text-sm text-gray-700';
+          notes.textContent = m.notes;
+          box.appendChild(notes);
+        }
+
         const body = document.createElement('div');
         body.className='border-t p-3';
         const head = document.createElement('div');
         head.className='grid grid-cols-12 text-xs font-medium text-gray-500';
         head.innerHTML='<div class="col-span-4">Målvakt</div><div class="col-span-2 text-center">Min</div><div class="col-span-3 text-center">Räddn</div><div class="col-span-3 text-center">Skott</div>';
         body.appendChild(head);
+
         m.entries.forEach(e=>{
           if ((e.minutes||0)+(e.saves||0)+(e.shots||0)===0) return;
-          const g = state.goalies.find(x=>x.id===e.goalieId); if(!g) return;
           const row = document.createElement('div');
           row.className='grid grid-cols-12 items-center py-1';
-          row.innerHTML = `<div class="col-span-4 text-sm">${g.name} <span class="text-gray-500">(${g.id})</span></div>
+          row.innerHTML = `<div class="col-span-4 text-sm">${e.name} <span class="text-gray-500">(${e.code})</span></div>
                            <div class="col-span-2 text-center">${e.minutes}</div>
                            <div class="col-span-3 text-center">${e.saves}</div>
                            <div class="col-span-3 text-center">${e.shots}</div>`;
           body.appendChild(row);
         });
+
         box.appendChild(header); box.appendChild(body);
         list.appendChild(box);
       });
     }
-
-    function redraw(){ renderGoalieInputs(); renderCards(); renderResultSummary(); renderMatchList(); }
-
-    // actions
-    document.getElementById('reset-entries').addEventListener('click', ()=>{
-      state.goalies.forEach(g=>{
-        el('#m-'+g.id).value='0';
-        el('#s-'+g.id).value='0';
-        el('#t-'+g.id).value='0';
-      });
-    });
-
-    document.getElementById('add-match').addEventListener('click', ()=>{
-      const entries = state.goalies.map(g=>({
-        goalieId: g.id,
-        minutes: num(el('#m-'+g.id).value),
-        saves: num(el('#s-'+g.id).value),
-        shots: num(el('#t-'+g.id).value),
-      }));
-      const match = {
-        id: uid(),
-        date: el('#f-date').value || today(),
-        opponent: el('#f-opp').value || '',
-        result: formResult,
-        entries,
-      };
-      state.matches = [match, ...state.matches];
-      save(); redraw();
-      // quick clear except date
-      document.querySelectorAll('#goalie-grid input').forEach(i=> i.value='0');
-      el('#f-opp').value='';
-    });
-
-    // Export/Import
-    function download(filename, content, mime){
-      const blob = new Blob([content], {type: mime+';charset=utf-8'});
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
-    }
-
-    function toCSV(){
-      const header = ['date','opponent','result', ...state.goalies.flatMap(g=>[`${g.id}_minutes`, `${g.id}_saves`, `${g.id}_shots`]), 'notes'];
-      const rows = state.matches.map(m=>{
-        const map = Object.fromEntries(m.entries.map(e=>[e.goalieId, e]));
-        const cols = [m.date, esc(m.opponent), m.result, ...state.goalies.flatMap(g=>{
-          const e = map[g.id]||{}; return [e.minutes??'', e.saves??'', e.shots??''];
-        }), esc(m.notes||'')];
-        return cols.join(';');
-      });
-      return [header.join(';'), ...rows].join('\n');
-    }
-    function esc(v){ return /[;"\n]/.test(String(v)) ? '"'+String(v).replaceAll('"','""')+'"' : String(v); }
-
-    document.getElementById('btn-exp-csv').addEventListener('click', ()=> download('mv_export.csv', toCSV(), 'text/csv'));
-    document.getElementById('btn-exp-json').addEventListener('click', ()=> download('mv_export.json', JSON.stringify(state, null, 2), 'application/json'));
-
-    document.getElementById('imp-csv').addEventListener('change', (e)=>{
-      const f = e.target.files && e.target.files[0]; if(!f) return; const r = new FileReader();
-      r.onload = ()=>{
-        const text = String(r.result||'');
-        const lines = text.split(/\r?\n/).filter(Boolean);
-        if (lines.length<2) return;
-        const header = lines[0].split(';');
-        const idx = Object.fromEntries(header.map((h,i)=>[h.trim(), i]));
-        const matches = lines.slice(1).map(line=>{
-          const cols = parseCSV(line);
-          const entries = state.goalies.map(g=>({
-            goalieId: g.id,
-            minutes: toNum(cols[idx[`${g.id}_minutes`]]),
-            saves: toNum(cols[idx[`${g.id}_saves`]]),
-            shots: toNum(cols[idx[`${g.id}_shots`]]),
-          }));
-          return { id: uid(), date: cols[idx['date']]||today(), opponent: cols[idx['opponent']]||'', result: cols[idx['result']]||'V', entries };
-        });
-        state.matches = [...matches, ...state.matches]; save(); redraw();
-      };
-      r.readAsText(f);
-      e.target.value='';
-    });
-
-    function toNum(v){ const n = Number(String(v||'').replace(',', '.')); return Number.isFinite(n)?n:0; }
-
-    document.getElementById('imp-json').addEventListener('change', (e)=>{
-      const f = e.target.files && e.target.files[0]; if(!f) return; const r = new FileReader();
-      r.onload = ()=>{
-        try { const obj = JSON.parse(String(r.result||'{}')); if(obj.goalies && obj.matches){ state=obj; save(); redraw(); } } catch {}
-      };
-      r.readAsText(f);
-      e.target.value='';
-    });
-
-    function parseCSV(line){
-      const out=[]; let cur=''; let inQ=false; for(let i=0;i<line.length;i++){
-        const ch=line[i];
-        if(inQ){ if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else { inQ=false; } } else { cur+=ch; } }
-        else { if(ch==='"') inQ=true; else if(ch===';'){ out.push(cur); cur=''; } else { cur+=ch; } }
-      }
-      out.push(cur); return out;
-    }
-
-    function init(){ renderGoalieInputs(); redraw(); }
-    init();
   </script>
 </body>
 </html>
