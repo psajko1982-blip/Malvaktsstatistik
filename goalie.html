@@ -84,6 +84,11 @@
 const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// Exponera för devtools
+window.sb = sb;
+window.SUPABASE_URL = SUPABASE_URL;
+window.TEAM_ID = TEAM_ID;
+window.CODE = CODE;
 
 /* ===== Helpers ===== */
 const $ = s => document.querySelector(s);
@@ -118,6 +123,8 @@ async function boot(){
 
 /* ===== Data load ===== */
 async function loadPage(){
+  console.log('[goalie] team:', TEAM_ID, 'code:', CODE);
+  
   if(!TEAM_ID || !CODE){ $('#msg').textContent='Saknar team eller kod i URL.'; return; }
 
   try {
