@@ -120,49 +120,70 @@ async function boot(){
 async function loadPage(){
   if(!TEAM_ID || !CODE){ $('#msg').textContent='Saknar team eller kod i URL.'; return; }
 
-  // 1) Hämta målvakten (namn + id) i rätt team
-  const g = await sb.from('goalies')
-    .select('id, name, code')
-    .eq('team_id', TEAM_ID)
-    .eq('code', CODE)
-    .maybeSingle();
+  try {
+    // 1) Hämta målvakten (id + namn) i rätt team
+    const g = await sb.from('goalies')
+      .select('id, name, code')
+      .eq('team_id', TEAM_ID)
+      .eq('code', CODE.toUpperCase())
+      .maybeSingle();
+    if (g.error) throw g.error;
+    if (!g.data) throw new Error(`Målvakt ${CODE} finns inte i detta team.`);
 
-  if(g.error){ $('#msg').textContent = g.error.message; return; }
-  if(!g.data){ $('#msg').textContent = `Målvakt ${CODE} finns inte i valt team.`; return; }
+    $('#g-name').textContent = `${g.data.name} (${g.data.code})`;
+    $('#g-meta').textContent = `Team: ${TEAM_ID.slice(0,8)}…`;
 
-  $('#g-name').textContent = `${g.data.name} (${g.data.code})`;
-  $('#g-meta').textContent = `Team: ${TEAM_ID.slice(0,8)}…`;
+    // 2) Hämta statsrader för denna målvakt (utan join)
+    const s = await sb.from('match_goalie_stats')
+      .select('match_id, minutes, saves, shots')
+      .eq('team_id', TEAM_ID)
+      .eq('goalie_id', g.data.id)
+      .order('created_at', { ascending: true }); // fallback-sort
 
-  // 2) Hämta bara matcher där denna målvakt har stats
-  //    (inner-join + filter på goalie_id = g.data.id)
-  const res = await sb
-    .from('matches')
-    .select('id, date, opponent, match_goalie_stats!inner(minutes, saves, shots, goalie_id)')
-    .eq('team_id', TEAM_ID)
-    .eq('match_goalie_stats.goalie_id', g.data.id)   // <- viktig filtrering
-    .order('date', { ascending: true });
+    if (s.error) throw s.error;
+    if (!s.data?.length){
+      renderTable([]); renderCharts([]); bindExport([], g.data);
+      $('#g-min').textContent = 0; $('#g-saves').textContent = 0; $('#g-shots').textContent = 0; $('#g-svpct').textContent = '–';
+      return;
+    }
 
-  if(res.error){ $('#msg').textContent = res.error.message; return; }
+    // 3) Hämta match-info för de match_id vi fick
+    const matchIds = [...new Set(s.data.map(r => r.match_id))];
+    const m = await sb.from('matches')
+      .select('id, date, opponent')
+      .in('id', matchIds)
+      .order('date', { ascending: true });
 
-  // 3) Mappa ut raderna för tabell/grafer
-  const rows = (res.data || []).map(m => {
-    const e = (m.match_goalie_stats || [])[0] || {minutes:0,saves:0,shots:0};
-    return { date: m.date, opponent: m.opponent, minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0 };
-  });
+    if (m.error) throw m.error;
+    const matchById = Object.fromEntries((m.data || []).map(x => [x.id, x]));
 
-  // 4) Summera och rendera
-  const minutes = rows.reduce((a,r)=>a+r.minutes,0);
-  const saves   = rows.reduce((a,r)=>a+r.saves,0);
-  const shots   = rows.reduce((a,r)=>a+r.shots,0);
-  $('#g-min').textContent = minutes;
-  $('#g-saves').textContent = saves;
-  $('#g-shots').textContent = shots;
-  $('#g-svpct').textContent = shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+    // 4) Bygg rader (datum/opp + stats) i datumordning
+    const rows = (m.data || [])
+      .map(mm => {
+        const e = s.data.find(x => x.match_id === mm.id) || { minutes:0, saves:0, shots:0 };
+        return { date: mm.date, opponent: mm.opponent, minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0 };
+      })
+      .sort((a,b) => a.date.localeCompare(b.date));
 
-  renderTable(rows);
-  renderCharts(rows);
-  bindExport(rows, g.data);
+    // 5) Summera & rendera
+    const minutes = rows.reduce((a,r)=>a+r.minutes,0);
+    const saves   = rows.reduce((a,r)=>a+r.saves,0);
+    const shots   = rows.reduce((a,r)=>a+r.shots,0);
+    $('#g-min').textContent = minutes;
+    $('#g-saves').textContent = saves;
+    $('#g-shots').textContent = shots;
+    $('#g-svpct').textContent = shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+
+    renderTable(rows);
+    renderCharts(rows);
+    bindExport(rows, g.data);
+
+  } catch (e){
+    $('#msg').textContent = e?.message || String(e);
+    console.error('goalie.loadPage', e);
+  }
 }
+
 
 
 /* ===== Tabell ===== */
