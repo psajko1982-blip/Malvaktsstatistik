@@ -89,6 +89,7 @@ const CODE    = (qs.get('code') || '').toUpperCase();
 const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
 // Exponera för devtools
 window.sb = sb;
 window.SUPABASE_URL = SUPABASE_URL;
@@ -148,7 +149,7 @@ async function loadPage(){
       .select('match_id, minutes, saves, shots')
       .eq('team_id', TEAM_ID)
       .eq('goalie_id', g.data.id)
-      .order('created_at', { ascending: true }); // fallback-sort
+      .order('match_id', { ascending: true }); // fallback-sort
 
     if (s.error) throw s.error;
     if (!s.data?.length){
