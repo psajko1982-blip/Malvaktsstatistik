@@ -80,24 +80,7 @@
             <button data-res="F" class="resbtn rounded-xl border py-2 text-sm">Förlust</button>
           </div>
         </div>
-        <!-- Graf: Rädd% över tid -->
-        <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-          <div class="flex items-center justify-between">
-            <div class="text-sm text-gray-500">Rädd% över tid</div>
-            <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500">Målvakt</label>
-              <select id="chart-goalie" class="rounded-xl border p-2 text-sm"></select>
-            </div>
-          </div>
-          <div class="mt-3">
-            <canvas id="svpctChart" height="120"></canvas>
-            <div id="chart-empty" class="text-center text-sm text-gray-500 mt-2 hidden">
-              Ingen data att visa ännu.
-            </div>
-          </div>
-        </div>
-
-
+        
         <div class="mt-2">
           <label class="text-xs text-gray-500">Kommentar</label>
           <textarea id="f-notes" rows="2" placeholder="t.ex. bra tredje period, PP 2 mål..." class="w-full rounded-xl border p-2"></textarea>
@@ -120,7 +103,22 @@
 
       <!-- Översikt -->
       <div id="cards" class="grid sm:grid-cols-2 gap-3 mb-4"></div>
-
+      <!-- Graf: Rädd% över tid -->
+        <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
+          <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-500">Rädd% över tid</div>
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-gray-500">Målvakt</label>
+              <select id="chart-goalie" class="rounded-xl border p-2 text-sm"></select>
+            </div>
+          </div>
+          <div class="mt-3">
+            <canvas id="svpctChart" height="120"></canvas>
+            <div id="chart-empty" class="text-center text-sm text-gray-500 mt-2 hidden">
+              Ingen data att visa ännu.
+            </div>
+          </div>
+        </div>
       <!-- Resultat-summering -->
       <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
         <div class="text-sm text-gray-500">Resultat</div>
