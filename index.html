@@ -100,9 +100,18 @@
 
   <script>
     // ========= Konfiguration =========
-    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <- BYT
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                  // <- BYT
+    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // din URL
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg"; // din anon key
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    // ========= Felhjälpare =========
+    function showError(where, err) {
+      console.error(where, err);
+      const msg = (err && (err.message || err.details || err.hint)) || String(err);
+      const box = document.querySelector('#app-msg') || document.querySelector('#auth-msg');
+      if (box) box.textContent = `[${where}] ${msg}`;
+      else alert(`[${where}] ${msg}`);
+    }
 
     // ========= Hjälp =========
     const $ = (s) => document.querySelector(s);
@@ -118,13 +127,15 @@
     const whoami  = $('#whoami');
     const btnSignOut = $('#btn-signout');
 
+    let CURRENT_UID = null;
+
     $('#btn-signup').addEventListener('click', async () => {
       authMsg.textContent = '';
       const email = $('#email').value.trim();
       const password = $('#password').value;
       const { error } = await sb.auth.signUp({ email, password });
       if (error) authMsg.textContent = error.message;
-      else authMsg.textContent = 'Konto skapat. Du är inloggad om e-post kräver ingen bekräftelse (kolla Supabase-inställningarna).';
+      else authMsg.textContent = 'Konto skapat. Om e-postbekräftelse krävs, kolla din e-post.';
     });
 
     $('#btn-signin').addEventListener('click', async () => {
@@ -139,7 +150,10 @@
       await sb.auth.signOut();
     });
 
+    // EN sammanhållen onAuthStateChange
     sb.auth.onAuthStateChange(async (ev, session) => {
+      CURRENT_UID = session?.user?.id || null;
+
       if (session?.user) {
         whoami.classList.remove('hidden');
         btnSignOut.classList.remove('hidden');
@@ -149,7 +163,11 @@
         authBox.classList.add('mb-3');
 
         appBox.classList.remove('hidden');
-        await initApp(); // laddar målisar + matcher
+        try {
+          await initApp(); // laddar målisar + matcher
+        } catch (e) {
+          showError('init-app', e);
+        }
       } else {
         whoami.classList.add('hidden');
         btnSignOut.classList.add('hidden');
@@ -158,19 +176,16 @@
       }
     });
 
-    // ========= DB-funktioner =========
+    // ========= DB-funktioner (med user_id) =========
     async function dbEnsureDefaultGoalies() {
-      const { data, error } = await sb
-        .from('goalies')
-        .select('id')
-        .limit(1);
+      const { data, error } = await sb.from('goalies').select('id').limit(1);
       if (error) throw error;
       if (!data || data.length === 0) {
         const { error: insErr } = await sb.from('goalies').insert([
-          { code:'LL', name:'Leo L' },
-          { code:'IE', name:'Isac E' },
-          { code:'EH', name:'Emil H' },
-          { code:'LK', name:'Leo K' },
+          { user_id: CURRENT_UID, code:'LL', name:'Leo L' },
+          { user_id: CURRENT_UID, code:'IE', name:'Isac E' },
+          { user_id: CURRENT_UID, code:'EH', name:'Emil H' },
+          { user_id: CURRENT_UID, code:'LK', name:'Leo K' },
         ]);
         if (insErr) throw insErr;
       }
@@ -183,30 +198,42 @@
     }
 
     async function dbAddGoalie(code, name) {
-      const { data, error } = await sb.from('goalies').insert([{ code, name }]).select('id').single();
+      const { data, error } = await sb
+        .from('goalies')
+        .insert([{ user_id: CURRENT_UID, code, name }])
+        .select('id')
+        .single();
       if (error) throw error;
       return data.id;
     }
 
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
-      const { data: mData, error: mErr } = await sb.from('matches').insert([{ date, opponent, result, notes }]).select('id').single();
+      // 1) skapa match med user_id
+      const { data: mData, error: mErr } = await sb
+        .from('matches')
+        .insert([{ user_id: CURRENT_UID, date, opponent, result, notes }])
+        .select('id')
+        .single();
       if (mErr) throw mErr;
       const matchId = mData.id;
 
-      // Hämta målisar (code -> id)
+      // 2) hämta målisar (code -> id)
       const { data: gData, error: gErr } = await sb.from('goalies').select('id, code');
       if (gErr) throw gErr;
       const idByCode = Object.fromEntries(gData.map(g => [g.code, g.id]));
 
+      // 3) skapa statsrader med user_id
       const rows = entries.map(e => ({
+        user_id:  CURRENT_UID,
         match_id: matchId,
         goalie_id: idByCode[e.code],
-        minutes: e.minutes|0,
-        saves: e.saves|0,
-        shots: e.shots|0,
+        minutes:  e.minutes|0,
+        saves:    e.saves|0,
+        shots:    e.shots|0,
       }));
       const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
       if (sErr) throw sErr;
+
       return matchId;
     }
 
@@ -262,12 +289,13 @@
 
       $('#app-msg').textContent = '';
       try {
+        if (!CURRENT_UID) throw new Error('Inte inloggad.');
         await dbEnsureDefaultGoalies();
         GOALIES = await dbLoadGoalies();
         renderGoalieInputs();
         await refreshAll();
       } catch (e) {
-        $('#app-msg').textContent = e.message || String(e);
+        showError('initApp', e);
       }
 
       $('#reset-entries').onclick = () => {
@@ -287,7 +315,7 @@
           GOALIES = await dbLoadGoalies();
           renderGoalieInputs();
         } catch (e) {
-          alert(e.message || e);
+          showError('add-goalie', e);
         }
       };
 
@@ -300,6 +328,7 @@
           shots:   num($('#t-'+g.code).value),
         }));
         try {
+          if (!CURRENT_UID) throw new Error('Inte inloggad.');
           await dbAddMatch({
             date: $('#f-date').value || today(),
             opponent: $('#f-opp').value || '',
@@ -312,7 +341,7 @@
           $('#f-opp').value = '';
           await refreshAll();
         } catch (e) {
-          $('#app-msg').textContent = e.message || String(e);
+          showError('add-match', e);
         }
       };
     }
@@ -337,10 +366,14 @@
     }
 
     async function refreshAll(){
-      const matches = await dbListMatches();
-      renderCards(matches);
-      renderResultSummary(matches);
-      renderMatchList(matches);
+      try {
+        const matches = await dbListMatches();
+        renderCards(matches);
+        renderResultSummary(matches);
+        renderMatchList(matches);
+      } catch (e) {
+        showError('refresh-all', e);
+      }
     }
 
     function renderCards(matches){
@@ -408,7 +441,7 @@
           <button class="text-xs underline">Ta bort</button>
         `;
         header.querySelector('button').addEventListener('click', async ()=>{
-          try { await dbDeleteMatch(m.id); await refreshAll(); } catch(e){ alert(e.message || e); }
+          try { await dbDeleteMatch(m.id); await refreshAll(); } catch(e){ showError('delete-match', e); }
         });
 
         const body = document.createElement('div');
