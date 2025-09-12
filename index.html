@@ -242,22 +242,22 @@
     }
 
     async function dbCreateTeam(name){
-      // SKICKA owner_id EXPLICIT pga RLS WITH CHECK
-      const { data: t, error: te } = await sb
-        .from('teams')
-        .insert([{ name, owner_id: CURRENT_UID }])   // <= viktigt
-        .select('id, name, owner_id')
-        .single();
-      if (te) throw te;
+        const { data: t, error: te } = await sb
+            .from('teams')
+            .insert([{ name, owner_id: CURRENT_UID }])   // viktigt
+            .select('id, name, owner_id')
+            .single();
+        if (te) throw te;
 
-      const { data:{ user } } = await sb.auth.getUser();
-      const { error: me } = await sb
-        .from('team_members')
-        .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
-      if (me && me.code !== '23505') throw me;
+        const { data:{ user } } = await sb.auth.getUser();
+        const { error: me } = await sb
+            .from('team_members')
+            .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
+        if (me && me.code !== '23505') throw me;
 
-      return t;
+        return t;
     }
+
 
     async function dbInvite(email, team_id){
       const { data, error } = await sb.from('team_invites').insert([{ team_id, email }]).select('id, email, status, created_at').single();
