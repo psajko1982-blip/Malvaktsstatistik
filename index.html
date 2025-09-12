@@ -390,7 +390,7 @@
             .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
             if (insErr) throw insErr;
         }
-        }
+    }
 
 
     async function dbLoadGoalies(){
@@ -419,7 +419,7 @@
 
         if (ex.error) throw ex.error;
         return ex.data.id;
-        }
+    }
 
 
     async function dbAddMatch({ date, opponent, result, notes, entries }){
