@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MV – Målvakt (detaljer)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style> body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial} </style>
+</head>
+<body class="bg-gray-50">
+  <div class="mx-auto max-w-screen-md p-3 sm:p-4">
+    <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-xl font-bold">MV – Målvaktsdetaljer</h1>
+          <p class="text-sm text-gray-600">Per match, grafer & export</p>
+        </div>
+        <a href="index.html" class="text-sm underline">← Tillbaka</a>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div id="head" class="rounded-2xl border bg-white p-4 shadow-sm mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div class="text-sm text-gray-500">Målvakt</div>
+          <div id="g-name" class="text-xl font-semibold">–</div>
+          <div id="g-meta" class="text-xs text-gray-500">–</div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm text-gray-500">Rädd%</div>
+          <div id="g-svpct" class="text-2xl font-bold">–</div>
+        </div>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-2 mt-3 text-center">
+        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Minuter</div><div id="g-min" class="font-semibold">0</div></div>
+        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Räddningar</div><div id="g-saves" class="font-semibold">0</div></div>
+        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Skott</div><div id="g-shots" class="font-semibold">0</div></div>
+      </div>
+    </div>
+
+    <!-- Grafer -->
+    <div class="grid gap-4 mb-4">
+      <div class="rounded-2xl border shadow-sm p-3 bg-white">
+        <div class="text-sm text-gray-500">Rädd% över tid (med 3-matchers snitt)</div>
+        <div class="mt-3 h-48"><canvas id="svpctChart"></canvas></div>
+      </div>
+      <div class="rounded-2xl border shadow-sm p-3 bg-white">
+        <div class="text-sm text-gray-500">Skott & Räddningar per match</div>
+        <div class="mt-3 h-48"><canvas id="srChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tabell -->
+    <div class="rounded-2xl border shadow-sm p-3 bg-white">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-gray-500">Matcher</div>
+        <button id="btn-exp-csv" class="rounded-xl border px-3 py-1 text-sm">Exportera CSV</button>
+      </div>
+      <div class="overflow-x-auto mt-2">
+        <table class="w-full text-sm">
+          <thead class="text-left text-gray-500">
+            <tr>
+              <th class="py-2 pr-2">Datum</th>
+              <th class="py-2 pr-2">Motstånd</th>
+              <th class="py-2 pr-2 text-right">Min</th>
+              <th class="py-2 pr-2 text-right">Räddn</th>
+              <th class="py-2 pr-2 text-right">Skott</th>
+              <th class="py-2 pr-2 text-right">Rädd%</th>
+            </tr>
+          </thead>
+          <tbody id="tbl" class="divide-y"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="msg" class="text-sm text-red-600 mt-3"></div>
+  </div>
+
+<script>
+/* ===== Konfig – BYT TILL DINA VÄRDEN ===== */
+const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ===== Helpers ===== */
+const $ = s => document.querySelector(s);
+const num = v => { const n = Number(String(v??'').replace(',','.')); return Number.isFinite(n)?n:0; };
+const pctText = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+const pctNum  = (saves, shots) => shots>0 ? +(((saves/shots)*100).toFixed(2)) : null;
+const escCSV = v => { const s=String(v??''); return /[;"\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s; };
+function download(filename, content, mime){
+  const blob = new Blob([content], { type: (mime || 'text/plain') + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+const qs = new URLSearchParams(location.search);
+const TEAM_ID = qs.get('team') || '';
+const CODE    = (qs.get('code') || '').toUpperCase();
+
+let CURRENT_UID = null;
+
+/* ===== Auth boot ===== */
+async function getSessionSafe(){ try{ const r=await sb.auth.getSession(); return r?.data?.session ?? null; }catch{return null;} }
+sb.auth.onAuthStateChange(()=>boot());
+boot();
+
+async function boot(){
+  try{
+    const s = await getSessionSafe();
+    if(!s?.user){ $('#msg').textContent='Logga in på startsidan först.'; return; }
+    CURRENT_UID = s.user.id;
+    await loadPage();
+  } catch(e){ $('#msg').textContent = e?.message || String(e); }
+}
+
+/* ===== Data load ===== */
+async function loadPage(){
+  if(!TEAM_ID || !CODE){ $('#msg').textContent='Saknar team eller kod i URL.'; return; }
+
+  // hämta målvakt (namn)
+  const g = await sb.from('goalies')
+    .select('id, name, code')
+    .eq('team_id', TEAM_ID)
+    .eq('code', CODE)
+    .maybeSingle();
+
+  if(g.error){ $('#msg').textContent = g.error.message; return; }
+  if(!g.data){ $('#msg').textContent = `Målvakt ${CODE} finns inte i valt team.`; return; }
+
+  $('#g-name').textContent = `${g.data.name} (${g.data.code})`;
+  $('#g-meta').textContent = `Team: ${TEAM_ID.slice(0,8)}…`;
+
+  // hämta matcher + stats för denna målvakt
+  const res = await sb
+    .from('matches')
+    .select(`
+      id, date, opponent,
+      match_goalie_stats!inner ( minutes, saves, shots, goalie_id ),
+      goalies:match_goalie_stats_goalie_id_fkey!inner(code)
+    `)
+    .eq('team_id', TEAM_ID)
+    .order('date', { ascending: true });
+
+  if(res.error){ $('#msg').textContent = res.error.message; return; }
+
+  // filtrera denna målvakt
+  const rows = (res.data || [])
+    .map(m => {
+      const e = (m.match_goalie_stats || []).find(x => true); // redan inner-joinad
+      return { date: m.date, opponent: m.opponent, minutes: e?.minutes|0, saves: e?.saves|0, shots: e?.shots|0 };
+    });
+
+  // sammanfatta
+  const minutes = rows.reduce((a,r)=>a+r.minutes,0);
+  const saves   = rows.reduce((a,r)=>a+r.saves,0);
+  const shots   = rows.reduce((a,r)=>a+r.shots,0);
+  $('#g-min').textContent = minutes;
+  $('#g-saves').textContent = saves;
+  $('#g-shots').textContent = shots;
+  $('#g-svpct').textContent = pctText(saves, shots);
+
+  renderTable(rows);
+  renderCharts(rows);
+  bindExport(rows, g.data);
+}
+
+/* ===== Tabell ===== */
+function renderTable(rows){
+  const tbody = $('#tbl'); tbody.innerHTML='';
+  if(!rows.length){ tbody.innerHTML = `<tr><td colspan="6" class="py-3 text-center text-gray-500">Inga matcher ännu.</td></tr>`; return; }
+  rows.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="py-2 pr-2">${r.date}</td>
+      <td class="py-2 pr-2">${r.opponent||''}</td>
+      <td class="py-2 pr-2 text-right">${r.minutes}</td>
+      <td class="py-2 pr-2 text-right">${r.saves}</td>
+      <td class="py-2 pr-2 text-right">${r.shots}</td>
+      <td class="py-2 pr-2 text-right">${pctText(r.saves, r.shots)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+/* ===== Grafer ===== */
+let svpctChart=null, srChart=null;
+
+function movingAvg(arr, window=3){
+  const out=[]; for(let i=0;i<arr.length;i++){ const s=arr.slice(Math.max(0,i-window+1),i+1).filter(v=>v!=null);
+    out.push(s.length?+(s.reduce((a,b)=>a+b,0)/s.length).toFixed(2):null); } return out;
+}
+
+function renderCharts(rows){
+  const labels = rows.map(r=>r.date);
+  const sv = rows.map(r => pctNum(r.saves, r.shots));
+  const ma = movingAvg(sv, 3);
+
+  if(svpctChart){ svpctChart.destroy(); }
+  svpctChart = new Chart($('#svpctChart').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'Rädd%', data: sv, spanGaps:true, tension:0.3, pointRadius:3 },
+      { label:'3-matchers snitt', data: ma, spanGaps:true, borderDash:[6,4], tension:0.3, pointRadius:0 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ suggestedMin:60, suggestedMax:100, ticks:{ callback:v=>v+'%' }}, x:{ ticks:{ autoSkip:true, maxRotation:0 } } },
+      plugins:{ legend:{ position:'bottom' } }
+    }
+  });
+
+  if(srChart){ srChart.destroy(); }
+  srChart = new Chart($('#srChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { label:'Skott', data: rows.map(r=>r.shots) },
+      { label:'Räddningar', data: rows.map(r=>r.saves) }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ y:{ beginAtZero:true } },
+      plugins:{ legend:{ position:'bottom' } }
+    }
+  });
+}
+
+/* ===== Export ===== */
+function exportRowsCSV(g, rows){
+  const head = ['date','opponent','minutes','saves','shots','save_pct'];
+  const lines = [head.join(';')];
+  rows.forEach(r=>{
+    const pct = r.shots>0?((r.saves/r.shots)*100).toFixed(2):'';
+    lines.push([`"${r.date}"`, escCSV(r.opponent||''), r.minutes, r.saves, r.shots, pct].join(';'));
+  });
+  const csv = lines.join('\r\n');
+  const BOM = '\uFEFF';
+  download(`mv_${g.code}_matches.csv`, BOM+csv, 'text/csv');
+}
+function bindExport(rows, g){
+  $('#btn-exp-csv').onclick = ()=>exportRowsCSV(g, rows);
+}
+</script>
+</body>
+</html>
