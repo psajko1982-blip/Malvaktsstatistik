@@ -80,6 +80,11 @@
   </div>
 
 <script>
+
+const qs = new URLSearchParams(location.search);
+const TEAM_ID = qs.get('team') || '';
+const CODE    = (qs.get('code') || '').toUpperCase();
+
 /* ===== Konfig – BYT TILL DINA VÄRDEN ===== */
 const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
@@ -101,9 +106,7 @@ function download(filename, content, mime){
   const url = URL.createObjectURL(blob); const a = document.createElement('a');
   a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
 }
-const qs = new URLSearchParams(location.search);
-const TEAM_ID = qs.get('team') || '';
-const CODE    = (qs.get('code') || '').toUpperCase();
+
 
 let CURRENT_UID = null;
 
