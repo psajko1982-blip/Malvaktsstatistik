@@ -17,7 +17,6 @@
   <div class="mx-auto max-w-screen-sm p-3 sm:p-4">
     <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
       <h1 class="text-xl font-bold">MV – Målvaktsstatistik</h1>
-      <p class="text-sm text-gray-600">Supabase • Team/RLS • E-postinloggning</p>
     </div>
 
     <!-- Auth -->
@@ -536,9 +535,10 @@
 
     // ===== Export / Import =====
     function download(filename, content, mime){
-      const blob = new Blob([content], {type: (mime || 'text/plain') + ';charset=utf-8'});
+      const blob = new Blob([content], { type: (mime || 'text/plain') + ';charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
     }
 
@@ -551,25 +551,40 @@
 
     function escCSV(v){ const s = String(v ?? ''); return /[;"\n]/.test(s) ? '"' + s.replaceAll('"','""') + '"' : s; }
     function buildCSV(goalies, matches){
-      const head = ['date','opponent','result', ...goalies.flatMap(g=>[`${g.code}_minutes`,`${g.code}_saves`,`${g.code}_shots`]), 'notes'];
+      const head = ['date','opponent','result',
+        ...goalies.flatMap(g => [`${g.code}_minutes`, `${g.code}_saves`, `${g.code}_shots`]),
+        'notes'
+      ];
       const lines = [head.join(';')];
+
       for (const m of matches){
-        const map = Object.fromEntries((m.entries||[]).map(e => [e.code, e]));
+        const map = Object.fromEntries((m.entries || []).map(e => [e.code, e]));
         const cols = [
-          m.date, escCSV(m.opponent||''), m.result,
-          ...goalies.flatMap(g => { const e = map[g.code]||{}; return [e.minutes??'', e.saves??'', e.shots??'']; }),
-          escCSV(m.notes||'')
+          `"${m.date}"`,                           // behåll datum som text i Excel
+          escCSV(m.opponent || ''),                // säkra semikolon/citat-tecken
+          m.result,
+          ...goalies.flatMap(g => {
+            const e = map[g.code] || {};
+            return [e.minutes ?? '', e.saves ?? '', e.shots ?? ''];
+          }),
+          escCSV(m.notes || '')
         ];
         lines.push(cols.join(';'));
-      }
-      return lines.join('\n');
     }
+  // CRLF för Excel
+  return lines.join('\r\n');
+}
+
 
     async function exportCSV(){
       const goalies = await dbLoadGoalies();
       const matches = await dbListMatches();
-      download('mv_export.csv', buildCSV(goalies, matches), 'text/csv');
+      const csv = buildCSV(goalies, matches);
+
+      const BOM = '\uFEFF'; // UTF-8 BOM → rätt å/ä/ö i Excel
+      download('mv_export.csv', BOM + csv, 'text/csv');
     }
+
 
     function bindExportButtons(){
       const j = $('#btn-exp-json'), c = $('#btn-exp-csv');
