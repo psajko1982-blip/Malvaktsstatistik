@@ -955,6 +955,11 @@
         window.__LATEST_MATCHES__ = matches;  // cache för snabb redraw
         updateChartSelect();                  // fyll/välj målvakt i dropdown
         renderSavePctChart(matches);          // rita grafen
+        const btnCompare = document.getElementById('btn-compare');
+        if (btnCompare && CURRENT_TEAM_ID) {
+          btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
+          btnCompare.target = '_self';
+        }
 
       } catch (e){ showError('refresh-all', e); }
     }
