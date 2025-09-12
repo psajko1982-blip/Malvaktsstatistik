@@ -364,33 +364,7 @@
     }
 
     // ===== DB-funktioner (team-baserade) =====
-    async function dbEnsureDefaultGoalies(){
-        const { data, error } = await sb
-            .from('goalies')
-            .select('code')
-            .eq('team_id', CURRENT_TEAM_ID);
-        if (error) throw error;
-
-        const have = new Set((data || []).map(g => normCode(g.code)));
-        const wanted = [
-            { code:'LL', name:'Leo L' },
-            { code:'IE', name:'Isac E' },
-            { code:'EH', name:'Emil H' },
-            { code:'LK', name:'Leo K' },
-        ];
-
-        const missing = wanted
-            .map(g => ({ code: normCode(g.code), name: g.name }))
-            .filter(g => !have.has(g.code))
-            .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
-
-        if (missing.length){
-            const { error: insErr } = await sb
-            .from('goalies')
-            .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
-            if (insErr) throw insErr;
-        }
-    }
+  
 
 
 
