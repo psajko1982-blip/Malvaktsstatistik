@@ -363,19 +363,35 @@
 
     // ===== DB-funktioner (team-baserade) =====
     async function dbEnsureDefaultGoalies(){
-      const { data, error } = await sb.from('goalies').select('id').eq('team_id', CURRENT_TEAM_ID).limit(1);
-      if (error) throw error;
-      if (!data || data.length === 0){
-        const rows = [
-          { code:'LL', name:'Leo L' },
-          { code:'IE', name:'Isac E' },
-          { code:'EH', name:'Emil H' },
-          { code:'LK', name:'Leo K' },
-        ].map(x => ({ ...x, team_id: CURRENT_TEAM_ID }));
-        const { error: insErr } = await sb.from('goalies').insert(rows);
-        if (insErr) throw insErr;
-      }
-    }
+        // Kolla om det redan finns någon för teamet
+        const { data, error } = await sb
+            .from('goalies')
+            .select('code')
+            .eq('team_id', CURRENT_TEAM_ID);
+        if (error) throw error;
+
+        const have = new Set((data || []).map(g => g.code));
+        const wanted = [
+            { code:'LL', name:'Leo L' },
+            { code:'IE', name:'Isac E' },
+            { code:'EH', name:'Emil H' },
+            { code:'LK', name:'Leo K' },
+        ];
+
+        // Lägg bara in saknade
+        const missing = wanted
+            .filter(g => !have.has(g.code))
+            .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
+
+        if (missing.length) {
+            // Om du lagt SQL-unik-regeln team_id,code kan du också göra en upsert:
+            const { error: insErr } = await sb
+            .from('goalies')
+            .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
+            if (insErr) throw insErr;
+        }
+        }
+
 
     async function dbLoadGoalies(){
       const { data, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
