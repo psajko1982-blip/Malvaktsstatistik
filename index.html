@@ -99,84 +99,100 @@
   </div>
 
   <script>
-    // ========= Konfiguration =========
-    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // din URL
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg"; // din anon key
+    // ====== Supabase-konfig (BYT VÄRDEN HÄR) ======
+    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- byt
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                  // <-- byt
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-    // ========= Felhjälpare =========
-    function showError(where, err) {
-      console.error(where, err);
-      const msg = (err && (err.message || err.details || err.hint)) || String(err);
-      const box = document.querySelector('#app-msg') || document.querySelector('#auth-msg');
-      if (box) box.textContent = `[${where}] ${msg}`;
-      else alert(`[${where}] ${msg}`);
-    }
-
-    // ========= Hjälp =========
+    // ====== Helpers ======
     const $ = (s) => document.querySelector(s);
     const today = () => new Date().toISOString().slice(0, 10);
     const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
     const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
     const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
 
-    // ========= UI: Auth =========
+    function showError(where, err) {
+      console.error(where, err);
+      const msg = (err && (err.message || err.details || err.hint)) || String(err);
+      const box = $('#app-msg') || $('#auth-msg');
+      if (box) box.textContent = `[${where}] ${msg}`;
+    }
+
+    async function getSessionSafe(timeoutMs = 2000) {
+      // Race: getSession vs timeout
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('getSession timeout')), timeoutMs));
+      try {
+        const res = await Promise.race([sb.auth.getSession(), timeout]);
+        if (res?.data?.session) return res.data.session;
+      } catch {}
+      // Fallback – tvinga nätverkskoll
+      const userRes = await sb.auth.getUser();
+      if (userRes?.data?.user) {
+        const s = await sb.auth.getSession();
+        return s?.data?.session ?? null;
+      }
+      return null;
+    }
+
+    // ====== Auth UI ======
     const authBox = $('#auth');
     const appBox  = $('#app');
+    const authForms = $('#auth-forms');
     const authMsg = $('#auth-msg');
     const whoami  = $('#whoami');
     const btnSignOut = $('#btn-signout');
 
-    let CURRENT_UID = null;
-
     $('#btn-signup').addEventListener('click', async () => {
       authMsg.textContent = '';
-      const email = $('#email').value.trim();
-      const password = $('#password').value;
-      const { error } = await sb.auth.signUp({ email, password });
-      if (error) authMsg.textContent = error.message;
-      else authMsg.textContent = 'Konto skapat. Om e-postbekräftelse krävs, kolla din e-post.';
+      try {
+        const { error } = await sb.auth.signUp({ email: $('#email').value.trim(), password: $('#password').value });
+        if (error) throw error;
+        authMsg.textContent = 'Konto skapat. Logga in om du inte redan är inloggad.';
+      } catch (e) { showError('signup', e); }
     });
 
     $('#btn-signin').addEventListener('click', async () => {
       authMsg.textContent = '';
-      const email = $('#email').value.trim();
-      const password = $('#password').value;
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) authMsg.textContent = error.message;
+      try {
+        const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+        if (error) throw error;
+      } catch (e) { showError('signin', e); }
     });
 
     btnSignOut.addEventListener('click', async () => {
       await sb.auth.signOut();
     });
 
-    // EN sammanhållen onAuthStateChange
-    sb.auth.onAuthStateChange(async (ev, session) => {
-      CURRENT_UID = session?.user?.id || null;
+    let CURRENT_UID = null;
 
-      if (session?.user) {
-        whoami.classList.remove('hidden');
-        btnSignOut.classList.remove('hidden');
-        $('#auth-forms').classList.add('hidden');
-        whoami.textContent = `Inloggad som ${session.user.email}`;
-        authMsg.textContent = '';
-        authBox.classList.add('mb-3');
-
-        appBox.classList.remove('hidden');
-        try {
-          await initApp(); // laddar målisar + matcher
-        } catch (e) {
-          showError('init-app', e);
+    async function boot() {
+      try {
+        const session = await getSessionSafe();
+        if (session?.user?.id) {
+          CURRENT_UID = session.user.id;
+          whoami.textContent = `Inloggad som ${session.user.email}`;
+          whoami.classList.remove('hidden');
+          btnSignOut.classList.remove('hidden');
+          authForms.classList.add('hidden');
+          appBox.classList.remove('hidden');
+          await initApp();
+        } else {
+          CURRENT_UID = null;
+          whoami.classList.add('hidden');
+          btnSignOut.classList.add('hidden');
+          authForms.classList.remove('hidden');
+          appBox.classList.add('hidden');
         }
-      } else {
-        whoami.classList.add('hidden');
-        btnSignOut.classList.add('hidden');
-        $('#auth-forms').classList.remove('hidden');
-        appBox.classList.add('hidden');
-      }
-    });
+      } catch (e) { showError('boot', e); }
+    }
 
-    // ========= DB-funktioner (med user_id) =========
+    sb.auth.onAuthStateChange((_ev, session) => {
+      CURRENT_UID = session?.user?.id || null;
+      boot();
+    });
+    boot(); // första uppstarten vid sidladdning
+
+    // ====== DB-funktioner (ALLTID med user_id) ======
     async function dbEnsureDefaultGoalies() {
       const { data, error } = await sb.from('goalies').select('id').limit(1);
       if (error) throw error;
@@ -208,7 +224,6 @@
     }
 
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
-      // 1) skapa match med user_id
       const { data: mData, error: mErr } = await sb
         .from('matches')
         .insert([{ user_id: CURRENT_UID, date, opponent, result, notes }])
@@ -217,12 +232,10 @@
       if (mErr) throw mErr;
       const matchId = mData.id;
 
-      // 2) hämta målisar (code -> id)
       const { data: gData, error: gErr } = await sb.from('goalies').select('id, code');
       if (gErr) throw gErr;
       const idByCode = Object.fromEntries(gData.map(g => [g.code, g.id]));
 
-      // 3) skapa statsrader med user_id
       const rows = entries.map(e => ({
         user_id:  CURRENT_UID,
         match_id: matchId,
@@ -233,7 +246,6 @@
       }));
       const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
       if (sErr) throw sErr;
-
       return matchId;
     }
 
@@ -271,12 +283,14 @@
       if (error) throw error;
     }
 
-    // ========= App state =========
+    // ====== App state & UI ======
     let GOALIES = []; // [{id, code, name}]
     let formResult = 'V';
 
     async function initApp() {
       $('#f-date').value = today();
+
+      // resultatknappar
       document.querySelectorAll('.resbtn').forEach(btn => {
         btn.classList.remove('border-black');
         if (btn.dataset.res === 'V') btn.classList.add('border-black');
@@ -287,16 +301,13 @@
         };
       });
 
-      $('#app-msg').textContent = '';
       try {
         if (!CURRENT_UID) throw new Error('Inte inloggad.');
         await dbEnsureDefaultGoalies();
         GOALIES = await dbLoadGoalies();
         renderGoalieInputs();
         await refreshAll();
-      } catch (e) {
-        showError('initApp', e);
-      }
+      } catch (e) { showError('initApp', e); }
 
       $('#reset-entries').onclick = () => {
         GOALIES.forEach(g => {
@@ -314,9 +325,7 @@
           await dbAddGoalie(code, name);
           GOALIES = await dbLoadGoalies();
           renderGoalieInputs();
-        } catch (e) {
-          showError('add-goalie', e);
-        }
+        } catch (e) { showError('add-goalie', e); }
       };
 
       $('#add-match').onclick = async () => {
@@ -336,13 +345,10 @@
             notes: '',
             entries
           });
-          // Reset inputs
           document.querySelectorAll('#goalie-grid input').forEach(i => i.value = '0');
           $('#f-opp').value = '';
           await refreshAll();
-        } catch (e) {
-          showError('add-match', e);
-        }
+        } catch (e) { showError('add-match', e); }
       };
     }
 
@@ -371,9 +377,7 @@
         renderCards(matches);
         renderResultSummary(matches);
         renderMatchList(matches);
-      } catch (e) {
-        showError('refresh-all', e);
-      }
+      } catch (e) { showError('refresh-all', e); }
     }
 
     function renderCards(matches){
