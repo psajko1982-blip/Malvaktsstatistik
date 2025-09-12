@@ -422,34 +422,50 @@
     }
 
 
-    async function dbAddMatch({ date, opponent, result, notes, entries }){
-      const { data: mData, error: mErr } = await sb
-        .from('matches')
-        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
-        .select('id')
-        .single();
-      if (mErr) throw mErr;
-      const matchId = mData.id;
+    async function dbAddMatch({ date, opponent, result, notes, entries }) {
+        // 1) Skapa matchen
+        const { data: mData, error: mErr } = await sb
+            .from('matches')
+            .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
+            .select('id')
+            .single();
+        if (mErr) throw mErr;
+        const matchId = mData.id;
 
-      const { data: gData, error: gErr } = await sb
-        .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
-      if (gErr) throw gErr;
-      const idByCode = Object.fromEntries((gData||[]).map(g => [g.code, g.id]));
+        // 2) Hämta målvakts-ID:n för teamet
+        const { data: gData, error: gErr } = await sb
+            .from('goalies')
+            .select('id, code')
+            .eq('team_id', CURRENT_TEAM_ID);
+        if (gErr) throw gErr;
+        const idByCode = Object.fromEntries((gData || []).map(g => [g.code, g.id]));
 
-      const rows = entries.map(e => ({
-        team_id:  CURRENT_TEAM_ID,
-        match_id: matchId,
-        goalie_id: idByCode[e.code],
-        minutes:  e.minutes|0,
-        saves:    e.saves|0,
-        shots:    e.shots|0
-      }));
-      if (rows.length){
+        // 3) Bygg rader – bara de som faktiskt har data (>0)
+        const rows = entries
+            .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0)
+            .map(e => {
+            const gid = idByCode[e.code];
+            if (!gid) throw new Error(`Okänd målvaktkod: ${e.code} (finns inte i teamet)`);
+            return {
+                team_id:  CURRENT_TEAM_ID,
+                match_id: matchId,
+                goalie_id: gid,
+                minutes:  e.minutes|0,
+                saves:    e.saves|0,
+                shots:    e.shots|0,
+            };
+            });
+
+        // 4) Om inga rader – lämna bara matchen utan stats (ok)
+        if (rows.length === 0) return matchId;
+
+        // 5) Skriv stats
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
         if (sErr) throw sErr;
-      }
-      return matchId;
+
+        return matchId;
     }
+
 
     async function dbListMatches(){
       const { data, error } = await sb
