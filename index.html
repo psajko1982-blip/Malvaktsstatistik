@@ -400,14 +400,27 @@
     }
 
     async function dbAddGoalie(code, name){
-      const { data, error } = await sb
-        .from('goalies')
-        .insert([{ team_id: CURRENT_TEAM_ID, code, name }])
-        .select('id')
-        .single();
-      if (error) throw error;
-      return data.id;
-    }
+        // Försök upsert – om raden redan finns får vi ev. null tillbaka
+        const up = await sb.from('goalies')
+            .upsert({ team_id: CURRENT_TEAM_ID, code, name }, { onConflict: 'team_id,code', ignoreDuplicates: true })
+            .select('id')
+            .maybeSingle();
+
+        if (up.error && up.error.code !== '23505') throw up.error; // annat fel
+
+        // Har vi id redan? klart. Annars hämta existerande rad.
+        if (up.data?.id) return up.data.id;
+
+        const ex = await sb.from('goalies')
+            .select('id')
+            .eq('team_id', CURRENT_TEAM_ID)
+            .eq('code', code)
+            .single();
+
+        if (ex.error) throw ex.error;
+        return ex.data.id;
+        }
+
 
     async function dbAddMatch({ date, opponent, result, notes, entries }){
       const { data: mData, error: mErr } = await sb
