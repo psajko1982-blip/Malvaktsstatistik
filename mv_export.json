@@ -1,0 +1,246 @@
+{
+  "goalies": [
+    {
+      "id": "LL",
+      "name": "Leo L"
+    },
+    {
+      "id": "IE",
+      "name": "Isac E"
+    },
+    {
+      "id": "EH",
+      "name": "Emil H"
+    },
+    {
+      "id": "LK",
+      "name": "Leo K"
+    }
+  ],
+  "matches": [
+    {
+      "id": "pk02c0qo",
+      "date": "2025-09-07",
+      "opponent": "Söderhamn",
+      "result": "O",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 35,
+          "saves": 20,
+          "shots": 23
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "ryq4ghu9",
+      "date": "2025-09-07",
+      "opponent": "FOC Farsta",
+      "result": "O",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 30,
+          "saves": 8,
+          "shots": 10
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "s3hwsapo",
+      "date": "2025-09-07",
+      "opponent": "Värmdö",
+      "result": "V",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 30,
+          "saves": 16,
+          "shots": 18
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "hwgk4uez",
+      "date": "2025-09-07",
+      "opponent": "Enköping",
+      "result": "V",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 30,
+          "saves": 10,
+          "shots": 10
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "z1zn1z79",
+      "date": "2025-08-30",
+      "opponent": "VIK",
+      "result": "F",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 60,
+          "saves": 26,
+          "shots": 35
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "1x6h5wj0",
+      "date": "2025-08-24",
+      "opponent": "Kumla",
+      "result": "V",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 30,
+          "saves": 15,
+          "shots": 17
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 30,
+          "saves": 8,
+          "shots": 9
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    },
+    {
+      "id": "w2xqxtjq",
+      "date": "2025-08-17",
+      "opponent": "Åkers Strängnäs",
+      "result": "V",
+      "entries": [
+        {
+          "goalieId": "LL",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "IE",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "EH",
+          "minutes": 60,
+          "saves": 0,
+          "shots": 0
+        },
+        {
+          "goalieId": "LK",
+          "minutes": 0,
+          "saves": 0,
+          "shots": 0
+        }
+      ]
+    }
+  ]
+}
