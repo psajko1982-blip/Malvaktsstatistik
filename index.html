@@ -143,6 +143,8 @@
     const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- byt
     const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                  // <-- byt
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    const normCode = (c) => String(c || '').trim().toUpperCase();
+
 
     // ===== Helpers =====
     const $ = (s) => document.querySelector(s);
@@ -363,14 +365,13 @@
 
     // ===== DB-funktioner (team-baserade) =====
     async function dbEnsureDefaultGoalies(){
-        // Kolla om det redan finns någon för teamet
         const { data, error } = await sb
             .from('goalies')
             .select('code')
             .eq('team_id', CURRENT_TEAM_ID);
         if (error) throw error;
 
-        const have = new Set((data || []).map(g => g.code));
+        const have = new Set((data || []).map(g => normCode(g.code)));
         const wanted = [
             { code:'LL', name:'Leo L' },
             { code:'IE', name:'Isac E' },
@@ -378,19 +379,19 @@
             { code:'LK', name:'Leo K' },
         ];
 
-        // Lägg bara in saknade
         const missing = wanted
+            .map(g => ({ code: normCode(g.code), name: g.name }))
             .filter(g => !have.has(g.code))
             .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
 
-        if (missing.length) {
-            // Om du lagt SQL-unik-regeln team_id,code kan du också göra en upsert:
+        if (missing.length){
             const { error: insErr } = await sb
             .from('goalies')
             .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
             if (insErr) throw insErr;
         }
     }
+
 
 
     async function dbLoadGoalies(){
@@ -400,30 +401,28 @@
     }
 
     async function dbAddGoalie(code, name){
-        // Försök upsert – om raden redan finns får vi ev. null tillbaka
+        const CODE = normCode(code);
         const up = await sb.from('goalies')
-            .upsert({ team_id: CURRENT_TEAM_ID, code, name }, { onConflict: 'team_id,code', ignoreDuplicates: true })
+            .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name }, { onConflict: 'team_id,code', ignoreDuplicates: true })
             .select('id')
             .maybeSingle();
 
-        if (up.error && up.error.code !== '23505') throw up.error; // annat fel
-
-        // Har vi id redan? klart. Annars hämta existerande rad.
+        if (up.error && up.error.code !== '23505') throw up.error;
         if (up.data?.id) return up.data.id;
 
         const ex = await sb.from('goalies')
             .select('id')
             .eq('team_id', CURRENT_TEAM_ID)
-            .eq('code', code)
+            .eq('code', CODE)
             .single();
-
         if (ex.error) throw ex.error;
         return ex.data.id;
     }
 
 
+
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
-        // 1) Skapa matchen
+        // 1) Skapa match
         const { data: mData, error: mErr } = await sb
             .from('matches')
             .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
@@ -432,19 +431,16 @@
         if (mErr) throw mErr;
         const matchId = mData.id;
 
-        // 2) Hämta målvakts-ID:n för teamet
-        const { data: gData, error: gErr } = await sb
-            .from('goalies')
-            .select('id, code')
-            .eq('team_id', CURRENT_TEAM_ID);
-        if (gErr) throw gErr;
-        const idByCode = Object.fromEntries((gData || []).map(g => [g.code, g.id]));
+        // 2) Säkerställ att alla koder från UI finns i DB (skapa saknade)
+        const idByCode = await dbGetGoalieMapEnsure(
+            (GOALIES || []).map(g => ({ code: g.code, name: g.name }))
+        );
 
-        // 3) Bygg rader – bara de som faktiskt har data (>0)
-        const rows = entries
+        // 3) Bygg statsrader – endast de som har data
+        const rows = (entries || [])
             .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0)
             .map(e => {
-            const gid = idByCode[e.code];
+            const gid = idByCode[normCode(e.code)];
             if (!gid) throw new Error(`Okänd målvaktkod: ${e.code} (finns inte i teamet)`);
             return {
                 team_id:  CURRENT_TEAM_ID,
@@ -456,15 +452,13 @@
             };
             });
 
-        // 4) Om inga rader – lämna bara matchen utan stats (ok)
         if (rows.length === 0) return matchId;
 
-        // 5) Skriv stats
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
         if (sErr) throw sErr;
-
         return matchId;
     }
+
 
 
     async function dbListMatches(){
@@ -547,18 +541,22 @@
 
     // ---- Import helpers (goalies map + upsert match) ----
     async function dbGetGoalieMapEnsure(codesAndNames){
-      const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
-      if (error) throw error;
-      const have = new Map((gData||[]).map(g => [g.code, g]));
-      const missing = (codesAndNames||[]).filter(x => x.code && !have.has(x.code));
-      if (missing.length){
-        const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
-        const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
-        if (e2) throw e2;
-        (ins||[]).forEach(g => have.set(g.code, g));
-      }
-      return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
+        const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID);
+        if (error) throw error;
+        const have = new Map((gData || []).map(g => [normCode(g.code), g]));
+        const missing = (codesAndNames || [])
+            .map(x => ({ code: normCode(x.code), name: x.name }))
+            .filter(x => x.code && !have.has(x.code));
+
+        if (missing.length){
+            const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
+            const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
+            if (e2) throw e2;
+            (ins || []).forEach(g => have.set(normCode(g.code), g));
+        }
+        return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
     }
+
 
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
       let { data: found, error: sErr } = await sb
