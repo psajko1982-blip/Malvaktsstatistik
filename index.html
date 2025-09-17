@@ -854,22 +854,22 @@ async function dbInsertShots(matchId){
       const matchIds = matches.map(m => m.id);
       const { data, error } = await sb
         .from('shots')
-        .select('match_id, goalie_id, count:id')
+        .select('match_id, goalie_id')              // inga aggregeringar här
         .eq('team_id', CURRENT_TEAM_ID)
-        .in('match_id', matchIds)
-        .group('match_id,goalie_id');
+        .in('match_id', matchIds);
 
       if (error) { showError('load-shots-per-match', error); return new Map(); }
 
       // Map: matchId -> Map(goalie_id -> count)
       const byMatch = new Map();
-      for (const row of data || []) {
+      for (const row of (data || [])) {
         const m = byMatch.get(row.match_id) || new Map();
-        m.set(row.goalie_id, row.count);
+        m.set(row.goalie_id, (m.get(row.goalie_id) || 0) + 1);
         byMatch.set(row.match_id, m);
       }
       return byMatch;
     }
+
 
 
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
