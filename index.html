@@ -848,40 +848,39 @@ async function dbInsertShots(matchId){
         return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
     }
 
-    async function dbGroupShotStatsByMatch(matches){
+    function dbGroupShotStatsByMatch(matches){
       if (!matches?.length) return new Map();
 
       const matchIds = matches.map(m => m.id);
-      const { data, error } = await sb
+      return sb
         .from('shots')
         .select('match_id, goalie_id, result')
         .eq('team_id', CURRENT_TEAM_ID)
-        .in('match_id', matchIds);
+        .in('match_id', matchIds)
+        .then(({ data, error }) => {
+          if (error) { showError('load-shots-per-match', error); return new Map(); }
 
-      if (error) { showError('load-shots-per-match', error); return new Map(); }
+          // Map: matchId -> Map(goalie_id -> { save, goal, miss, block, sog, total })
+          const byMatch = new Map();
+          for (const row of (data || [])) {
+            const m = byMatch.get(row.match_id) || new Map();
+            const cur = m.get(row.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
 
-      // Map: matchId -> Map(goalie_id -> { save, goal, miss, block, sog, total })
-      const byMatch = new Map();
+            const key = String(row.result || '').toLowerCase();
+            if (key in cur) cur[key] += 1; else cur[key] = (cur[key] || 0) + 1;
 
-      for (const row of (data || [])) {
-        const m = byMatch.get(row.match_id) || new Map();
-        const cur = m.get(row.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
+            cur.sog = (cur.save || 0) + (cur.goal || 0);
+            cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);
 
-        const key = String(row.result || '').toLowerCase();
-        if (key in cur) cur[key] += 1; else cur[key] = (cur[key] || 0) + 1;
-
-        cur.sog = (cur.save || 0) + (cur.goal || 0);                 // shots on goal
-        cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);    // alla events
-
-        m.set(row.goalie_id, cur);
-        byMatch.set(row.match_id, m);
-      }
-
-      return byMatch;
+            m.set(row.goalie_id, cur);
+            byMatch.set(row.match_id, m);
+          }
+          return byMatch;
+        });
     }
 
-
-
+    // Backwards-compat alias:
+    const dbGroupShotsByMatch = dbGroupShotStatsByMatch;
 
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
       let { data: found, error: sErr } = await sb
@@ -1219,23 +1218,19 @@ async function dbInsertShots(matchId){
         renderGoalieInputs();
 
         const matches = await dbListMatches();
-        const shotsByMatch = await dbGroupShotsByMatch(matches); // <—
+        const shotStatsByMatch = await dbGroupShotStatsByMatch(matches);
 
         renderCards(matches);
         renderResultSummary(matches);
-        renderMatchList(matches, shotStatsByMatch);                   // <—
-        window.__LATEST_MATCHES__ = matches;
+        renderMatchList(matches, shotStatsByMatch); // <-- skicka in stats-kartan
 
+        window.__LATEST_MATCHES__ = matches;
         updateChartSelect();
         renderSavePctChart(matches);
-
-        const btnCompare = document.getElementById('btn-compare');
-        if (btnCompare && CURRENT_TEAM_ID) {
-          btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
-          btnCompare.target = '_self';
-        }
+        // ... ev. compare-länk som du hade ...
       } catch (e){ showError('refresh-all', e); }
     }
+
 
 
     function renderCards(matches){
