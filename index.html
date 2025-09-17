@@ -222,6 +222,125 @@
     const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
     const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
     const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+    // ===== Skott-buffert för pågående match =====
+// Struktur: { CODE: [ {x,y,period,time_sec,result} , ... ], ... }
+const SHOTS_BUFFER = {};
+let CURRENT_SHOT_CODE = null;
+
+function mmssToSec(s){
+  const m = String(s||'').trim().split(':');
+  if (m.length !== 2) return 0;
+  const mm = parseInt(m[0],10), ss = parseInt(m[1],10);
+  return (Number.isFinite(mm)?mm:0)*60 + (Number.isFinite(ss)?ss:0);
+}
+
+function updateShotBadge(code){
+  const el = document.getElementById(`shot-count-${code}`);
+  if (!el) return;
+  const n = (SHOTS_BUFFER[code] || []).length;
+  el.textContent = `${n} skott`;
+}
+
+function openShotModal(code){
+  CURRENT_SHOT_CODE = code;
+  document.getElementById('shot-modal-code').textContent = code;
+  document.getElementById('shot-modal').classList.remove('hidden');
+  document.getElementById('shot-modal').classList.add('flex');
+  // rensa och rita existerande punkter
+  renderShotDots();
+}
+
+function closeShotModal(){
+  document.getElementById('shot-modal').classList.add('hidden');
+  document.getElementById('shot-modal').classList.remove('flex');
+  CURRENT_SHOT_CODE = null;
+}
+
+function renderShotDots(){
+  const dots = document.getElementById('shot-dots');
+  dots.innerHTML = '';
+  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
+  const wrap = document.getElementById('shot-rink');
+  const r = wrap.getBoundingClientRect();
+  arr.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'absolute rounded-full';
+    d.style.width = '10px'; d.style.height = '10px';
+    d.style.left = `${Math.round(s.x * r.width) - 5}px`;
+    d.style.top  = `${Math.round(s.y * r.height) - 5}px`;
+    d.style.background = s.result === 'goal' ? '#ef4444' : '#1f2937'; // röd för mål, mörkgrå för övrigt
+    dots.appendChild(d);
+  });
+}
+
+document.getElementById('shot-rink').addEventListener('click', (ev) => {
+  if (!CURRENT_SHOT_CODE) return;
+  const wrap = ev.currentTarget;
+  const rect = wrap.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) / rect.width;
+  const y = (ev.clientY - rect.top)  / rect.height;
+  const period  = parseInt(document.getElementById('shot-period').value, 10) || 1;
+  const timeSec = mmssToSec(document.getElementById('shot-time').value || '00:00');
+  const result  = document.getElementById('shot-result').value || 'save';
+
+  SHOTS_BUFFER[CURRENT_SHOT_CODE] ||= [];
+  SHOTS_BUFFER[CURRENT_SHOT_CODE].push({ x, y, period, time_sec: timeSec, result });
+
+  updateShotBadge(CURRENT_SHOT_CODE);
+  renderShotDots();
+});
+
+function undoLastShot(){
+  if (!CURRENT_SHOT_CODE) return;
+  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
+  arr.pop();
+  updateShotBadge(CURRENT_SHOT_CODE);
+  renderShotDots();
+}
+
+function clearShotsForCurrent(){
+  if (!CURRENT_SHOT_CODE) return;
+  SHOTS_BUFFER[CURRENT_SHOT_CODE] = [];
+  updateShotBadge(CURRENT_SHOT_CODE);
+  renderShotDots();
+}
+
+// ===== Spara skott till DB efter att matchen skapats =====
+async function dbInsertShots(matchId){
+  // bygg goalie-id lookup
+  const { data: gData, error: gErr } = await sb
+    .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
+  if (gErr) throw gErr;
+  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code).toUpperCase(), g.id]));
+
+  // konvertera buffert till rader
+  const rows = [];
+  for (const [code, shots] of Object.entries(SHOTS_BUFFER)){
+    const gid = idByCode[String(code).toUpperCase()];
+    if (!gid) continue; // ok om någon saknas
+    (shots||[]).forEach(s => {
+      rows.push({
+        team_id:  CURRENT_TEAM_ID,
+        match_id: matchId,
+        goalie_id: gid,
+        x: s.x, y: s.y,
+        period: s.period || 1,
+        time_sec: s.time_sec || 0,
+        result: s.result || 'save'
+      });
+    });
+  }
+  if (!rows.length) return;
+
+  const { error: insErr } = await sb.from('shots').insert(rows);
+  if (insErr) throw insErr;
+
+  // töm bufferten efter lyckad insert
+  for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
+  // uppdatera badges i UI
+  (GOALIES||[]).forEach(g => updateShotBadge(g.code));
+}
+
 
     function showError(where, err){
       console.error(where, err);
