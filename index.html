@@ -680,6 +680,7 @@ async function dbInsertShots(matchId){
         });
 
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
+        await dbInsertShots(matchId);
         if (sErr) throw sErr;
         return matchId;
     }
