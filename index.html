@@ -848,6 +848,29 @@ async function dbInsertShots(matchId){
         return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
     }
 
+    async function dbGroupShotsByMatch(matches){
+      if (!matches?.length) return new Map();
+
+      const matchIds = matches.map(m => m.id);
+      const { data, error } = await sb
+        .from('shots')
+        .select('match_id, goalie_id, count:id')
+        .eq('team_id', CURRENT_TEAM_ID)
+        .in('match_id', matchIds)
+        .group('match_id,goalie_id');
+
+      if (error) { showError('load-shots-per-match', error); return new Map(); }
+
+      // Map: matchId -> Map(goalie_id -> count)
+      const byMatch = new Map();
+      for (const row of data || []) {
+        const m = byMatch.get(row.match_id) || new Map();
+        m.set(row.goalie_id, row.count);
+        byMatch.set(row.match_id, m);
+      }
+      return byMatch;
+    }
+
 
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
       let { data: found, error: sErr } = await sb
@@ -1180,21 +1203,29 @@ async function dbInsertShots(matchId){
 
     async function refreshAll(){
       try {
+        await dbEnsureDefaultGoalies();
+        GOALIES = await dbLoadGoalies();
+        renderGoalieInputs();
+
         const matches = await dbListMatches();
+        const shotsByMatch = await dbGroupShotsByMatch(matches); // <—
+
         renderCards(matches);
         renderResultSummary(matches);
-        renderMatchList(matches);
-        window.__LATEST_MATCHES__ = matches;  // cache för snabb redraw
-        updateChartSelect();                  // fyll/välj målvakt i dropdown
-        renderSavePctChart(matches);          // rita grafen
+        renderMatchList(matches, shotsByMatch);                   // <—
+        window.__LATEST_MATCHES__ = matches;
+
+        updateChartSelect();
+        renderSavePctChart(matches);
+
         const btnCompare = document.getElementById('btn-compare');
         if (btnCompare && CURRENT_TEAM_ID) {
           btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
           btnCompare.target = '_self';
         }
-
       } catch (e){ showError('refresh-all', e); }
     }
+
 
     function renderCards(matches){
       const wrap = $('#cards'); 
@@ -1246,60 +1277,63 @@ async function dbInsertShots(matchId){
       $('#stat-min').textContent = minutesTotal;
     }
 
-    function renderMatchList(matches){
-      const list = $('#match-list'); list.innerHTML='';
-      if (!matches.length){
-        const empty = document.createElement('div');
-        empty.className='text-center text-sm text-gray-500';
-        empty.textContent='Inga matcher ännu. Lägg till första ovan.';
-        list.appendChild(empty);
-        return;
-      }
-      matches.forEach(m => {
-        const box = document.createElement('div');
-        box.className='rounded-2xl border shadow-sm bg-white';
-        const header = document.createElement('div');
-        header.className='flex items-center justify-between p-3';
-        header.innerHTML = `
-          <div>
-            <div class="text-sm font-semibold">${m.opponent || 'Motstånd saknas'}</div>
-            <div class="text-xs text-gray-500">${m.date} • ${m.result==='V'?'Vinst':m.result==='O'?'Oavgjort':'Förlust'}</div>
-          </div>
-          <button class="text-xs underline">Ta bort</button>
-        `;
-        header.querySelector('button').addEventListener('click', async ()=>{
-          try { await dbDeleteMatch(m.id); await refreshAll(); } catch(e){ showError('delete-match', e); }
-        });
+    function renderMatchList(matches, shotsByMatch){
+      const wrap = document.getElementById('match-list');
+      wrap.innerHTML = '';
 
-        if (m.notes && m.notes.trim()){
-          const notes = document.createElement('div');
-          notes.className = 'px-3 pb-2 text-sm text-gray-700';
-          notes.textContent = m.notes;
-          box.appendChild(notes);
+      // snabb lookup: goalie_id -> {name, code}
+      const goalieById = new Map((GOALIES||[]).map(g => [g.id, g]));
+
+      for (const m of matches){
+        const card = document.createElement('div');
+        card.className = 'rounded-2xl border p-4 mb-4';
+
+        // rubrik mm (din befintliga kod)...
+        const hdr = `
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
+              <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
+            </div>
+            <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+          </div>
+        `;
+
+        // rader för denna match
+        const shotMap = shotsByMatch?.get(m.id) || new Map();
+        let rowsHtml = '';
+        if (shotMap.size){
+          for (const [gid, cnt] of shotMap.entries()){
+            const g = goalieById.get(gid);
+            const name = g?.name || 'Okänd målvakt';
+            const code = g?.code || '';
+            rowsHtml += `
+              <div class="grid grid-cols-12 text-sm py-1">
+                <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
+                <div class="col-span-2 text-center">–</div>
+                <div class="col-span-2 text-center">–</div>
+                <div class="col-span-2 text-center font-medium">${cnt}</div>
+              </div>
+            `;
+          }
+        } else {
+          rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
         }
 
-        const body = document.createElement('div');
-        body.className='border-t p-3';
-        const head = document.createElement('div');
-        head.className='grid grid-cols-12 text-xs font-medium text-gray-500';
-        head.innerHTML='<div class="col-span-4">Målvakt</div><div class="col-span-2 text-center">Min</div><div class="col-span-3 text-center">Räddn</div><div class="col-span-3 text-center">Skott</div>';
-        body.appendChild(head);
+        card.innerHTML = hdr + `
+          <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
+            <div class="col-span-6">Målvakt</div>
+            <div class="col-span-2 text-center">Min</div>
+            <div class="col-span-2 text-center">Räddn</div>
+            <div class="col-span-2 text-center">Skott</div>
+          </div>
+          ${rowsHtml}
+        `;
 
-        m.entries.forEach(e=>{
-          if ((e.minutes||0)+(e.saves||0)+(e.shots||0)===0) return;
-          const row = document.createElement('div');
-          row.className='grid grid-cols-12 items-center py-1';
-          row.innerHTML = `<div class="col-span-4 text-sm">${e.name} <span class="text-gray-500">(${e.code})</span></div>
-                           <div class="col-span-2 text-center">${e.minutes}</div>
-                           <div class="col-span-3 text-center">${e.saves}</div>
-                           <div class="col-span-3 text-center">${e.shots}</div>`;
-          body.appendChild(row);
-        });
-
-        box.appendChild(header); box.appendChild(body);
-        list.appendChild(box);
-      });
+        wrap.appendChild(card);
+      }
     }
+
 
   </script>
 </body>
