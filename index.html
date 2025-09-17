@@ -153,56 +153,6 @@
         </div>
       </div>
 
-      <!-- Modal: Lägg skott i aktuell match -->
-    <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
-      <div class="bg-white rounded-2xl p-4 w-full max-w-md">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
-          <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
-        </div>
-
-        <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
-        <div id="shot-rink" class="relative w-full border rounded-xl overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
-          <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
-            <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
-            <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
-            <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
-            <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
-          </svg>
-          <!-- klick-markers -->
-          <div id="shot-dots" class="absolute inset-0"></div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2 mt-3">
-          <label class="text-sm">Period
-            <select id="shot-period" class="w-full border rounded-xl p-2">
-              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-            </select>
-          </label>
-          <label class="text-sm col-span-2">Tid (mm:ss)
-            <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
-          </label>
-          <label class="text-sm col-span-3">Resultat
-            <select id="shot-result" class="w-full border rounded-xl p-2">
-              <option value="save">Räddning</option>
-              <option value="goal">Mål</option>
-              <option value="miss">Utanför</option>
-              <option value="block">Blockerat</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="flex items-center justify-between mt-3">
-          <div class="text-xs text-gray-500">
-            <button type="button" class="underline" onclick="undoLastShot()">Ångra senaste</button>
-            · <button type="button" class="underline" onclick="clearShotsForCurrent()">Rensa alla</button>
-          </div>
-          <button type="button" class="rounded-xl border px-3 py-1" onclick="closeShotModal()">Klar</button>
-        </div>
-      </div>
-    </div>
-
-
       <!-- Matcher -->
       <div id="match-list" class="space-y-3 mb-24"></div>
     </div>
@@ -222,169 +172,6 @@
     const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
     const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
     const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
-    // ===== Skott-buffert för pågående match =====
-// Struktur: { CODE: [ {x,y,period,time_sec,result} , ... ], ... }
-const SHOTS_BUFFER = {};
-let CURRENT_SHOT_CODE = null;
-
-function mmssToSec(s){
-  const m = String(s||'').trim().split(':');
-  if (m.length !== 2) return 0;
-  const mm = parseInt(m[0],10), ss = parseInt(m[1],10);
-  return (Number.isFinite(mm)?mm:0)*60 + (Number.isFinite(ss)?ss:0);
-}
-
-function updateShotBadge(code){
-  const el = document.getElementById(`shot-count-${code}`);
-  if (!el) return;
-  const n = (SHOTS_BUFFER[code] || []).length;
-  el.textContent = `${n} skott`;
-}
-
-function openShotModal(code){
-  CURRENT_SHOT_CODE = code;
-  document.getElementById('shot-modal-code').textContent = code;
-  document.getElementById('shot-modal').classList.remove('hidden');
-  document.getElementById('shot-modal').classList.add('flex');
-  // rensa och rita existerande punkter
-  renderShotDots();
-}
-
-function closeShotModal(){
-  document.getElementById('shot-modal').classList.add('hidden');
-  document.getElementById('shot-modal').classList.remove('flex');
-  CURRENT_SHOT_CODE = null;
-}
-
-function renderShotDots(){
-  const dots = document.getElementById('shot-dots');
-  dots.innerHTML = '';
-  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
-  const wrap = document.getElementById('shot-rink');
-  const r = wrap.getBoundingClientRect();
-  arr.forEach(s => {
-    const d = document.createElement('div');
-    d.className = 'absolute rounded-full';
-    d.style.width = '10px'; d.style.height = '10px';
-    d.style.left = `${Math.round(s.x * r.width) - 5}px`;
-    d.style.top  = `${Math.round(s.y * r.height) - 5}px`;
-    d.style.background = s.result === 'goal' ? '#ef4444' : '#1f2937'; // röd för mål, mörkgrå för övrigt
-    dots.appendChild(d);
-  });
-}
-
-document.getElementById('shot-rink').addEventListener('click', (ev) => {
-  if (!CURRENT_SHOT_CODE) return;
-  const wrap = ev.currentTarget;
-  const rect = wrap.getBoundingClientRect();
-  const x = (ev.clientX - rect.left) / rect.width;
-  const y = (ev.clientY - rect.top)  / rect.height;
-  const period  = parseInt(document.getElementById('shot-period').value, 10) || 1;
-  const timeSec = mmssToSec(document.getElementById('shot-time').value || '00:00');
-  const result  = document.getElementById('shot-result').value || 'save';
-
-  SHOTS_BUFFER[CURRENT_SHOT_CODE] ||= [];
-  SHOTS_BUFFER[CURRENT_SHOT_CODE].push({ x, y, period, time_sec: timeSec, result });
-
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-});
-
-function undoLastShot(){
-  if (!CURRENT_SHOT_CODE) return;
-  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
-  arr.pop();
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-}
-
-function clearShotsForCurrent(){
-  if (!CURRENT_SHOT_CODE) return;
-  SHOTS_BUFFER[CURRENT_SHOT_CODE] = [];
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-}
-
-// ===== Spara skott till DB efter att matchen skapats =====
-// ===== Spara skott till DB efter att matchen skapats =====
-async function dbInsertShots(matchId){
-  if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
-  if (!matchId) throw new Error('Saknar matchId vid skottinsert');
-
-  // bygg goalie-id lookup
-  const { data: gData, error: gErr } = await sb
-    .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
-  if (gErr) throw gErr;
-
-  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code).trim().toUpperCase(), g.id]));
-
-  // konvertera buffert till rader
-  const rows = [];
-  for (const [codeRaw, shots] of Object.entries(SHOTS_BUFFER)){
-    const code = String(codeRaw).trim().toUpperCase();
-    const gid = idByCode[code];
-    if (!gid) {
-      console.warn('[dbInsertShots] Okänd målvaktkod i detta team:', code);
-      continue;
-    }
-    (shots||[]).forEach(s => {
-      rows.push({
-        team_id:  CURRENT_TEAM_ID,
-        match_id: matchId,
-        goalie_id: gid,
-        x: s.x, y: s.y,
-        period: s.period || 1,
-        time_sec: s.time_sec || 0,
-        result: s.result || 'save'
-      });
-    });
-  }
-
-  // Inget att spara? Säg det högt i UI så vi vet.
-  if (!rows.length){
-    const box = document.getElementById('app-msg');
-    if (box) box.textContent = '[shots] Inga buffrade skott att spara.';
-    console.info('[dbInsertShots] 0 rader (tom buffert).');
-    return 0;
-  }
-
-  console.table(rows.map(r => ({
-    match_id: r.match_id,
-    goalie_id: r.goalie_id,
-    x: +r.x?.toFixed?.(3),
-    y: +r.y?.toFixed?.(3),
-    period: r.period,
-    time_sec: r.time_sec,
-    result: r.result
-  })));
-
-  // Sätt .select('id') för att få tillbaka antal insatta rader
-  const { data: insData, error: insErr } = await sb
-    .from('shots')
-    .insert(rows)
-    .select('id');
-
-  if (insErr) {
-    // Visa RLS-/policyfel tydligt
-    showError('insert-shots', insErr);
-    throw insErr;
-  }
-
-  const inserted = (insData || []).length;
-  const msg = `[shots] Sparade ${inserted}/${rows.length} skott till matchen.`;
-  console.info(msg);
-  const box = document.getElementById('app-msg');
-  if (box) box.textContent = msg;
-
-  // töm bufferten efter lyckad insert
-  for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
-  // uppdatera badges i UI
-  (GOALIES||[]).forEach(g => updateShotBadge(g.code));
-
-  return inserted;
-}
-
-
 
     function showError(where, err){
       console.error(where, err);
@@ -682,10 +469,7 @@ async function dbInsertShots(matchId){
             .map(e => ({ ...e, code: normCode(e.code) }))
             .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
 
-        if (!filled.length) {
-          await dbInsertShots(matchId)
-          return matchId;
-        }  
+        if (!filled.length) return matchId;
 
         // Läs aktuella målvakter → idByCode
         const readMap = async () => {
@@ -727,7 +511,6 @@ async function dbInsertShots(matchId){
         });
 
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
-        await dbInsertShots(matchId);
         if (sErr) throw sErr;
         return matchId;
     }
@@ -847,29 +630,6 @@ async function dbInsertShots(matchId){
         }
         return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
     }
-
-    async function dbGroupShotsByMatch(matches){
-      if (!matches?.length) return new Map();
-
-      const matchIds = matches.map(m => m.id);
-      const { data, error } = await sb
-        .from('shots')
-        .select('match_id, goalie_id')              // inga aggregeringar här
-        .eq('team_id', CURRENT_TEAM_ID)
-        .in('match_id', matchIds);
-
-      if (error) { showError('load-shots-per-match', error); return new Map(); }
-
-      // Map: matchId -> Map(goalie_id -> count)
-      const byMatch = new Map();
-      for (const row of (data || [])) {
-        const m = byMatch.get(row.match_id) || new Map();
-        m.set(row.goalie_id, (m.get(row.goalie_id) || 0) + 1);
-        byMatch.set(row.match_id, m);
-      }
-      return byMatch;
-    }
-
 
 
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
@@ -1090,25 +850,10 @@ async function dbInsertShots(matchId){
           <input id="m-${g.code}" inputmode="numeric" class="col-span-2 rounded-xl border p-2 text-center" placeholder="min" value="0" />
           <input id="s-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="räddn" value="0" />
           <input id="t-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="skott" value="0" />
-          <span class="inline-flex items-center gap-1 text-xs">
-            <span id="shot-count-${g.code}" class="rounded-lg border px-2 py-0.5">0 skott</span>
-            <button type="button" id="btn-shot-${g.code}" class="rounded-lg border px-2 py-0.5">+ Skott</button>
-          </span>
-    `;
-    grid.appendChild(row);
-
-    // Se till att vi har en buffert-array för denna målvakt
-    SHOTS_BUFFER[g.code] ||= [];
-
-    // Koppla knappen till rätt målvakt
-    const btn = row.querySelector(`#btn-shot-${g.code}`);
-    btn.addEventListener('click', () => openShotModal(g.code));
-
-    // Uppdatera badge om det finns buffrade skott
-    updateShotBadge(g.code);
-  });
-}
-
+        `;
+        grid.appendChild(row);
+      });
+    }
 
     // ===== Graf: Rädd% över tid (Chart.js) =====
     let svpctChart = null;
@@ -1203,29 +948,21 @@ async function dbInsertShots(matchId){
 
     async function refreshAll(){
       try {
-        await dbEnsureDefaultGoalies();
-        GOALIES = await dbLoadGoalies();
-        renderGoalieInputs();
-
         const matches = await dbListMatches();
-        const shotsByMatch = await dbGroupShotsByMatch(matches); // <—
-
         renderCards(matches);
         renderResultSummary(matches);
-        renderMatchList(matches, shotsByMatch);                   // <—
-        window.__LATEST_MATCHES__ = matches;
-
-        updateChartSelect();
-        renderSavePctChart(matches);
-
+        renderMatchList(matches);
+        window.__LATEST_MATCHES__ = matches;  // cache för snabb redraw
+        updateChartSelect();                  // fyll/välj målvakt i dropdown
+        renderSavePctChart(matches);          // rita grafen
         const btnCompare = document.getElementById('btn-compare');
         if (btnCompare && CURRENT_TEAM_ID) {
           btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
           btnCompare.target = '_self';
         }
+
       } catch (e){ showError('refresh-all', e); }
     }
-
 
     function renderCards(matches){
       const wrap = $('#cards'); 
@@ -1277,63 +1014,60 @@ async function dbInsertShots(matchId){
       $('#stat-min').textContent = minutesTotal;
     }
 
-    function renderMatchList(matches, shotsByMatch){
-      const wrap = document.getElementById('match-list');
-      wrap.innerHTML = '';
-
-      // snabb lookup: goalie_id -> {name, code}
-      const goalieById = new Map((GOALIES||[]).map(g => [g.id, g]));
-
-      for (const m of matches){
-        const card = document.createElement('div');
-        card.className = 'rounded-2xl border p-4 mb-4';
-
-        // rubrik mm (din befintliga kod)...
-        const hdr = `
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
-              <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
-            </div>
-            <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+    function renderMatchList(matches){
+      const list = $('#match-list'); list.innerHTML='';
+      if (!matches.length){
+        const empty = document.createElement('div');
+        empty.className='text-center text-sm text-gray-500';
+        empty.textContent='Inga matcher ännu. Lägg till första ovan.';
+        list.appendChild(empty);
+        return;
+      }
+      matches.forEach(m => {
+        const box = document.createElement('div');
+        box.className='rounded-2xl border shadow-sm bg-white';
+        const header = document.createElement('div');
+        header.className='flex items-center justify-between p-3';
+        header.innerHTML = `
+          <div>
+            <div class="text-sm font-semibold">${m.opponent || 'Motstånd saknas'}</div>
+            <div class="text-xs text-gray-500">${m.date} • ${m.result==='V'?'Vinst':m.result==='O'?'Oavgjort':'Förlust'}</div>
           </div>
+          <button class="text-xs underline">Ta bort</button>
         `;
+        header.querySelector('button').addEventListener('click', async ()=>{
+          try { await dbDeleteMatch(m.id); await refreshAll(); } catch(e){ showError('delete-match', e); }
+        });
 
-        // rader för denna match
-        const shotMap = shotsByMatch?.get(m.id) || new Map();
-        let rowsHtml = '';
-        if (shotMap.size){
-          for (const [gid, cnt] of shotMap.entries()){
-            const g = goalieById.get(gid);
-            const name = g?.name || 'Okänd målvakt';
-            const code = g?.code || '';
-            rowsHtml += `
-              <div class="grid grid-cols-12 text-sm py-1">
-                <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                <div class="col-span-2 text-center">–</div>
-                <div class="col-span-2 text-center">–</div>
-                <div class="col-span-2 text-center font-medium">${cnt}</div>
-              </div>
-            `;
-          }
-        } else {
-          rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
+        if (m.notes && m.notes.trim()){
+          const notes = document.createElement('div');
+          notes.className = 'px-3 pb-2 text-sm text-gray-700';
+          notes.textContent = m.notes;
+          box.appendChild(notes);
         }
 
-        card.innerHTML = hdr + `
-          <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
-            <div class="col-span-6">Målvakt</div>
-            <div class="col-span-2 text-center">Min</div>
-            <div class="col-span-2 text-center">Räddn</div>
-            <div class="col-span-2 text-center">Skott</div>
-          </div>
-          ${rowsHtml}
-        `;
+        const body = document.createElement('div');
+        body.className='border-t p-3';
+        const head = document.createElement('div');
+        head.className='grid grid-cols-12 text-xs font-medium text-gray-500';
+        head.innerHTML='<div class="col-span-4">Målvakt</div><div class="col-span-2 text-center">Min</div><div class="col-span-3 text-center">Räddn</div><div class="col-span-3 text-center">Skott</div>';
+        body.appendChild(head);
 
-        wrap.appendChild(card);
-      }
+        m.entries.forEach(e=>{
+          if ((e.minutes||0)+(e.saves||0)+(e.shots||0)===0) return;
+          const row = document.createElement('div');
+          row.className='grid grid-cols-12 items-center py-1';
+          row.innerHTML = `<div class="col-span-4 text-sm">${e.name} <span class="text-gray-500">(${e.code})</span></div>
+                           <div class="col-span-2 text-center">${e.minutes}</div>
+                           <div class="col-span-3 text-center">${e.saves}</div>
+                           <div class="col-span-3 text-center">${e.shots}</div>`;
+          body.appendChild(row);
+        });
+
+        box.appendChild(header); box.appendChild(body);
+        list.appendChild(box);
+      });
     }
-
 
   </script>
 </body>
