@@ -638,9 +638,7 @@ async function dbInsertShots(matchId){
             .map(e => ({ ...e, code: normCode(e.code) }))
             .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
 
-        if (!filled.length) {
-          await dbInsertShots(matchId);
-          return matchId;
+        if (!filled.length) return matchId;
 
         // Läs aktuella målvakter → idByCode
         const readMap = async () => {
