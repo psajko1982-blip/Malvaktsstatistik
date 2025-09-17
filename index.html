@@ -306,18 +306,27 @@ function clearShotsForCurrent(){
 }
 
 // ===== Spara skott till DB efter att matchen skapats =====
+// ===== Spara skott till DB efter att matchen skapats =====
 async function dbInsertShots(matchId){
+  if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
+  if (!matchId) throw new Error('Saknar matchId vid skottinsert');
+
   // bygg goalie-id lookup
   const { data: gData, error: gErr } = await sb
     .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
   if (gErr) throw gErr;
-  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code).toUpperCase(), g.id]));
+
+  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code).trim().toUpperCase(), g.id]));
 
   // konvertera buffert till rader
   const rows = [];
-  for (const [code, shots] of Object.entries(SHOTS_BUFFER)){
-    const gid = idByCode[String(code).toUpperCase()];
-    if (!gid) continue; // ok om någon saknas
+  for (const [codeRaw, shots] of Object.entries(SHOTS_BUFFER)){
+    const code = String(codeRaw).trim().toUpperCase();
+    const gid = idByCode[code];
+    if (!gid) {
+      console.warn('[dbInsertShots] Okänd målvaktkod i detta team:', code);
+      continue;
+    }
     (shots||[]).forEach(s => {
       rows.push({
         team_id:  CURRENT_TEAM_ID,
@@ -330,16 +339,51 @@ async function dbInsertShots(matchId){
       });
     });
   }
-  if (!rows.length) return;
 
-  const { error: insErr } = await sb.from('shots').insert(rows);
-  if (insErr) throw insErr;
+  // Inget att spara? Säg det högt i UI så vi vet.
+  if (!rows.length){
+    const box = document.getElementById('app-msg');
+    if (box) box.textContent = '[shots] Inga buffrade skott att spara.';
+    console.info('[dbInsertShots] 0 rader (tom buffert).');
+    return 0;
+  }
+
+  console.table(rows.map(r => ({
+    match_id: r.match_id,
+    goalie_id: r.goalie_id,
+    x: +r.x?.toFixed?.(3),
+    y: +r.y?.toFixed?.(3),
+    period: r.period,
+    time_sec: r.time_sec,
+    result: r.result
+  })));
+
+  // Sätt .select('id') för att få tillbaka antal insatta rader
+  const { data: insData, error: insErr } = await sb
+    .from('shots')
+    .insert(rows)
+    .select('id');
+
+  if (insErr) {
+    // Visa RLS-/policyfel tydligt
+    showError('insert-shots', insErr);
+    throw insErr;
+  }
+
+  const inserted = (insData || []).length;
+  const msg = `[shots] Sparade ${inserted}/${rows.length} skott till matchen.`;
+  console.info(msg);
+  const box = document.getElementById('app-msg');
+  if (box) box.textContent = msg;
 
   // töm bufferten efter lyckad insert
   for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
   // uppdatera badges i UI
   (GOALIES||[]).forEach(g => updateShotBadge(g.code));
+
+  return inserted;
 }
+
 
 
     function showError(where, err){
