@@ -153,6 +153,56 @@
         </div>
       </div>
 
+      <!-- Modal: Lägg skott i aktuell match -->
+    <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+      <div class="bg-white rounded-2xl p-4 w-full max-w-md">
+        <div class="flex items-center justify-between mb-2">
+          <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
+          <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
+        </div>
+
+        <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
+        <div id="shot-rink" class="relative w-full border rounded-xl overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
+          <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
+            <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
+            <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
+            <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
+            <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
+          </svg>
+          <!-- klick-markers -->
+          <div id="shot-dots" class="absolute inset-0"></div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <label class="text-sm">Period
+            <select id="shot-period" class="w-full border rounded-xl p-2">
+              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+            </select>
+          </label>
+          <label class="text-sm col-span-2">Tid (mm:ss)
+            <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
+          </label>
+          <label class="text-sm col-span-3">Resultat
+            <select id="shot-result" class="w-full border rounded-xl p-2">
+              <option value="save">Räddning</option>
+              <option value="goal">Mål</option>
+              <option value="miss">Utanför</option>
+              <option value="block">Blockerat</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-between mt-3">
+          <div class="text-xs text-gray-500">
+            <button type="button" class="underline" onclick="undoLastShot()">Ångra senaste</button>
+            · <button type="button" class="underline" onclick="clearShotsForCurrent()">Rensa alla</button>
+          </div>
+          <button type="button" class="rounded-xl border px-3 py-1" onclick="closeShotModal()">Klar</button>
+        </div>
+      </div>
+    </div>
+
+
       <!-- Matcher -->
       <div id="match-list" class="space-y-3 mb-24"></div>
     </div>
