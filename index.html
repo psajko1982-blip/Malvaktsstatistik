@@ -1020,16 +1020,25 @@ async function dbInsertShots(matchId){
           <input id="m-${g.code}" inputmode="numeric" class="col-span-2 rounded-xl border p-2 text-center" placeholder="min" value="0" />
           <input id="s-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="räddn" value="0" />
           <input id="t-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="skott" value="0" />
-          <!-- liten skott-räknare/knapp per målvakt -->
           <span class="inline-flex items-center gap-1 text-xs">
-            <span id="shot-count-{{CODE}}" class="rounded-lg border px-2 py-0.5">0 skott</span>
-            <button type="button" class="rounded-lg border px-2 py-0.5"
-                    onclick="openShotModal('{{CODE}}')">+ Skott</button>
+            <span id="shot-count-${g.code}" class="rounded-lg border px-2 py-0.5">0 skott</span>
+            <button type="button" id="btn-shot-${g.code}" class="rounded-lg border px-2 py-0.5">+ Skott</button>
           </span>
-        `;
-        grid.appendChild(row);
-      });
-    }
+    `;
+    grid.appendChild(row);
+
+    // Se till att vi har en buffert-array för denna målvakt
+    SHOTS_BUFFER[g.code] ||= [];
+
+    // Koppla knappen till rätt målvakt
+    const btn = row.querySelector(`#btn-shot-${g.code}`);
+    btn.addEventListener('click', () => openShotModal(g.code));
+
+    // Uppdatera badge om det finns buffrade skott
+    updateShotBadge(g.code);
+  });
+}
+
 
     // ===== Graf: Rädd% över tid (Chart.js) =====
     let svpctChart = null;
