@@ -222,6 +222,7 @@
     const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
     const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
     const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+  
     // ===== Skott-buffert för pågående match =====
 // Struktur: { CODE: [ {x,y,period,time_sec,result} , ... ], ... }
 const SHOTS_BUFFER = {};
@@ -306,7 +307,65 @@ function clearShotsForCurrent(){
 }
 
 // ===== Spara skott till DB efter att matchen skapats =====
-// ===== Spara skott till DB efter att matchen skapats =====
+
+// Shots-events per match & målvakt: { save, goal, miss, block, sog, total }
+async function dbGroupShotStatsByMatch(matches){
+  if (!matches?.length) return new Map();
+  const matchIds = matches.map(m => m.id);
+
+  const { data, error } = await sb
+    .from('shots')
+    .select('match_id, goalie_id, result')
+    .eq('team_id', CURRENT_TEAM_ID)
+    .in('match_id', matchIds);
+
+  if (error) { showError('load-shots-per-match', error); return new Map(); }
+
+  const byMatch = new Map();
+  for (const r of (data || [])) {
+    const m = byMatch.get(r.match_id) || new Map();
+    const cur = m.get(r.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
+    const key = String(r.result || '').toLowerCase();
+    if (key in cur) cur[key] += 1;
+    else cur[key] = (cur[key] || 0) + 1;
+    cur.sog   = (cur.save || 0) + (cur.goal || 0);
+    cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);
+    m.set(r.goalie_id, cur);
+    byMatch.set(r.match_id, m);
+  }
+  return byMatch;
+}
+
+// Manuella stats per match & målvakt: { minutes, saves, shots }
+async function dbLoadManualStatsByMatch(matches){
+  if (!matches?.length) return new Map();
+  const matchIds = matches.map(m => m.id);
+
+  const { data, error } = await sb
+    .from('match_goalie_stats')
+    .select('match_id, goalie_id, minutes, saves, shots')
+    .eq('team_id', CURRENT_TEAM_ID)
+    .in('match_id', matchIds);
+
+  if (error) { showError('load-manual-stats', error); return new Map(); }
+
+  const byMatch = new Map();
+  for (const r of (data || [])) {
+    const m = byMatch.get(r.match_id) || new Map();
+    m.set(r.goalie_id, {
+      minutes: r.minutes|0,
+      saves:   r.saves|0,
+      shots:   r.shots|0
+    });
+    byMatch.set(r.match_id, m);
+  }
+  return byMatch;
+}
+
+// (valfritt alias om du har kvar gamla anrop)
+const dbGroupShotsByMatch = dbGroupShotStatsByMatch;
+
+
 async function dbDeleteMatch(matchId){
   if (!matchId) throw new Error('matchId saknas');
   if (!CURRENT_TEAM_ID) throw new Error('CURRENT_TEAM_ID saknas');
@@ -1229,24 +1288,134 @@ async function dbInsertShots(matchId){
 
 
     async function refreshAll(){
-      try {
-        await dbEnsureDefaultGoalies();
-        GOALIES = await dbLoadGoalies();
-        renderGoalieInputs();
+        try {
+            await dbEnsureDefaultGoalies();
+            GOALIES = await dbLoadGoalies();
+            renderGoalieInputs();
 
-        const matches = await dbListMatches();
-        const shotStatsByMatch = await dbGroupShotStatsByMatch(matches);
+            const matches = await dbListMatches();
 
-        renderCards(matches);
-        renderResultSummary(matches);
-        renderMatchList(matches, shotStatsByMatch); // <-- skicka in stats-kartan
+            const [shotStatsByMatch, manualStatsByMatch] = await Promise.all([
+            dbGroupShotStatsByMatch(matches),
+            dbLoadManualStatsByMatch(matches)
+            ]);
 
-        window.__LATEST_MATCHES__ = matches;
-        updateChartSelect();
-        renderSavePctChart(matches);
-        // ... ev. compare-länk som du hade ...
-      } catch (e){ showError('refresh-all', e); }
+            renderCards(matches);
+            renderResultSummary(matches);
+            renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch }); // <—
+
+            window.__LATEST_MATCHES__ = matches;
+            updateChartSelect();
+            renderSavePctChart(matches);
+
+            const btnCompare = document.getElementById('btn-compare');
+            if (btnCompare && CURRENT_TEAM_ID) {
+            btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
+            btnCompare.target = '_self';
+            }
+        } catch (e){ showError('refresh-all', e); }
     }
+
+    function renderMatchList(matches, maps = {}){
+        const { shotStatsByMatch = new Map(), manualStatsByMatch = new Map() } = maps;
+        const wrap = document.getElementById('match-list');
+        wrap.innerHTML = '';
+
+        const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+
+        for (const m of matches){
+            const card = document.createElement('div');
+            card.className = 'rounded-2xl border p-4 mb-4';
+
+            const hdr = `
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
+                <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
+                </div>
+                <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+            </div>
+            `;
+
+            const sMap = shotStatsByMatch.get(m.id)  || new Map(); // events
+            const gMap = manualStatsByMatch.get(m.id) || new Map(); // manuellt
+
+            // union av alla målvakts-id som finns i antingen events eller manuellt
+            const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
+
+            let rowsHtml = '';
+            if (unionIds.size){
+            for (const gid of unionIds){
+                const g  = goalieById.get(gid) || {};
+                const ev = sMap.get(gid) || null;
+                const ms = gMap.get(gid) || null;
+
+                const minutes = ms?.minutes ?? '–';
+
+                // välj Källa för Räddn/Skott:
+                // 1) Finns events? använd dem
+                // 2) annars manuella stats (shots/saves)
+                let saves, goals, sog;
+                if (ev){
+                saves = ev.save || 0;
+                goals = ev.goal || 0;
+                sog   = ev.sog  || (saves + goals);
+                } else {
+                const mSaves = ms?.saves | 0;
+                const mShots = ms?.shots | 0;
+                saves = mSaves;
+                goals = Math.max(0, mShots - mSaves);
+                sog   = Math.max(0, mShots);
+                }
+
+                const name = g.name || 'Okänd målvakt';
+                const code = g.code || '';
+
+                rowsHtml += `
+                <div class="grid grid-cols-12 text-sm py-1">
+                    <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
+                    <div class="col-span-2 text-center">${minutes}</div>
+                    <div class="col-span-2 text-center">${saves}</div>
+                    <div class="col-span-2 text-center font-medium">
+                    ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
+                    </div>
+                </div>
+                `;
+            }
+            } else {
+            rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
+            }
+
+            card.innerHTML = hdr + `
+            <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
+                <div class="col-span-6">Målvakt</div>
+                <div class="col-span-2 text-center">Min</div>
+                <div class="col-span-2 text-center">Räddn</div>
+                <div class="col-span-2 text-center">Skott</div>
+            </div>
+            ${rowsHtml}
+            <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
+            `;
+
+            wrap.appendChild(card);
+        }
+
+        // — event delegation för Ta bort (om du inte redan har)
+        if (!wrap.__hasDeleteHandler__) {
+            wrap.addEventListener('click', async (e) => {
+            const a = e.target.closest('[data-del]');
+            if (!a) return;
+            e.preventDefault();
+            const matchId = a.dataset.del;
+            if (!matchId) return;
+            if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
+            try { await dbDeleteMatch(matchId); await refreshAll(); }
+            catch (err) { showError('delete-match', err); }
+            });
+            wrap.__hasDeleteHandler__ = true;
+        }
+    }
+
 
 
 
