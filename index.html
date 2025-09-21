@@ -19,14 +19,13 @@
     <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
       <h1 class="text-xl font-bold">Målvaktsstatistik</h1>
     </div>
-    <a id="btn-compare"
-      class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">
+
+    <a id="btn-compare" class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">
       Jämför målvakter
     </a>
 
-
     <!-- Auth -->
-    <div id="auth" class="rounded-2xl border bg-white p-4 shadow-sm">
+    <div id="auth" class="rounded-2xl border bg-white p-4 shadow-sm mt-3">
       <div class="flex items-center justify-between mb-3">
         <h2 class="font-semibold">Logga in</h2>
         <button id="btn-signout" class="text-sm underline hidden">Logga ut</button>
@@ -46,7 +45,7 @@
     </div>
 
     <!-- Teamkontroll -->
-    <div id="team-bar" class="hidden rounded-2xl border bg-white p-3 shadow-sm mb-4">
+    <div id="team-bar" class="hidden rounded-2xl border bg-white p-3 shadow-sm mb-4 mt-3">
       <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div class="flex items-center gap-2">
           <span class="text-sm text-gray-600">Team:</span>
@@ -85,7 +84,7 @@
             <button data-res="F" class="resbtn rounded-xl border py-2 text-sm">Förlust</button>
           </div>
         </div>
-        
+
         <div class="mt-2">
           <label class="text-xs text-gray-500">Kommentar</label>
           <textarea id="f-notes" rows="2" placeholder="t.ex. bra tredje period, PP 2 mål..." class="w-full rounded-xl border p-2"></textarea>
@@ -108,22 +107,24 @@
 
       <!-- Översikt -->
       <div id="cards" class="grid sm:grid-cols-2 gap-3 mb-4"></div>
+
       <!-- Graf: Rädd% över tid -->
-        <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-          <div class="flex items-center justify-between">
-            <div class="text-sm text-gray-500">Rädd% över tid</div>
-            <div class="flex items-center gap-2">
-              <label class="text-xs text-gray-500">Målvakt</label>
-              <select id="chart-goalie" class="rounded-xl border p-2 text-sm"></select>
-            </div>
-          </div>
-          <div class="mt-3">
-            <canvas id="svpctChart" height="120"></canvas>
-            <div id="chart-empty" class="text-center text-sm text-gray-500 mt-2 hidden">
-              Ingen data att visa ännu.
-            </div>
+      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
+        <div class="flex items-center justify-between">
+          <div class="text-sm text-gray-500">Rädd% över tid</div>
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-gray-500">Målvakt</label>
+            <select id="chart-goalie" class="rounded-xl border p-2 text-sm"></select>
           </div>
         </div>
+        <div class="mt-3">
+          <canvas id="svpctChart" height="120"></canvas>
+          <div id="chart-empty" class="text-center text-sm text-gray-500 mt-2 hidden">
+            Ingen data att visa ännu.
+          </div>
+        </div>
+      </div>
+
       <!-- Resultat-summering -->
       <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
         <div class="text-sm text-gray-500">Resultat</div>
@@ -154,54 +155,53 @@
       </div>
 
       <!-- Modal: Lägg skott i aktuell match -->
-    <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
-      <div class="bg-white rounded-2xl p-4 w-full max-w-md">
-        <div class="flex items-center justify-between mb-2">
-          <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
-          <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
-        </div>
-
-        <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
-        <div id="shot-rink" class="relative w-full border rounded-xl overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
-          <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
-            <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
-            <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
-            <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
-            <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
-          </svg>
-          <!-- klick-markers -->
-          <div id="shot-dots" class="absolute inset-0"></div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2 mt-3">
-          <label class="text-sm">Period
-            <select id="shot-period" class="w-full border rounded-xl p-2">
-              <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-            </select>
-          </label>
-          <label class="text-sm col-span-2">Tid (mm:ss)
-            <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
-          </label>
-          <label class="text-sm col-span-3">Resultat
-            <select id="shot-result" class="w-full border rounded-xl p-2">
-              <option value="save">Räddning</option>
-              <option value="goal">Mål</option>
-              <option value="miss">Utanför</option>
-              <option value="block">Blockerat</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="flex items-center justify-between mt-3">
-          <div class="text-xs text-gray-500">
-            <button type="button" class="underline" onclick="undoLastShot()">Ångra senaste</button>
-            · <button type="button" class="underline" onclick="clearShotsForCurrent()">Rensa alla</button>
+      <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+        <div class="bg-white rounded-2xl p-4 w-full max-w-md">
+          <div class="flex items-center justify-between mb-2">
+            <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
+            <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
           </div>
-          <button type="button" class="rounded-xl border px-3 py-1" onclick="closeShotModal()">Klar</button>
+
+          <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
+          <div id="shot-rink" class="relative w-full border rounded-xl overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
+            <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
+              <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
+              <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
+              <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
+              <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
+            </svg>
+            <!-- klick-markers -->
+            <div id="shot-dots" class="absolute inset-0"></div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2 mt-3">
+            <label class="text-sm">Period
+              <select id="shot-period" class="w-full border rounded-xl p-2">
+                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+              </select>
+            </label>
+            <label class="text-sm col-span-2">Tid (mm:ss)
+              <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
+            </label>
+            <label class="text-sm col-span-3">Resultat
+              <select id="shot-result" class="w-full border rounded-xl p-2">
+                <option value="save">Räddning</option>
+                <option value="goal">Mål</option>
+                <option value="miss">Utanför</option>
+                <option value="block">Blockerat</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="flex items-center justify-between mt-3">
+            <div class="text-xs text-gray-500">
+              <button type="button" class="underline" onclick="undoLastShot()">Ångra senaste</button>
+              · <button type="button" class="underline" onclick="clearShotsForCurrent()">Rensa alla</button>
+            </div>
+            <button type="button" class="rounded-xl border px-3 py-1" onclick="closeShotModal()">Klar</button>
+          </div>
         </div>
       </div>
-    </div>
-
 
       <!-- Matcher -->
       <div id="match-list" class="space-y-3 mb-24"></div>
@@ -209,12 +209,11 @@
   </div>
 
   <script>
-    // ===== Supabase-konfig: BYT DESSA =====
-    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- byt
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                  // <-- byt
+    // ===== Supabase-konfig =====
+    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // din URL
+    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg"; // din anon key
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
     const normCode = (c) => String(c || '').trim().toUpperCase();
-
 
     // ===== Helpers =====
     const $ = (s) => document.querySelector(s);
@@ -222,264 +221,200 @@
     const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
     const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
     const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
-  
-    // ===== Skott-buffert för pågående match =====
-// Struktur: { CODE: [ {x,y,period,time_sec,result} , ... ], ... }
-const SHOTS_BUFFER = {};
-let CURRENT_SHOT_CODE = null;
 
-function mmssToSec(s){
-  const m = String(s||'').trim().split(':');
-  if (m.length !== 2) return 0;
-  const mm = parseInt(m[0],10), ss = parseInt(m[1],10);
-  return (Number.isFinite(mm)?mm:0)*60 + (Number.isFinite(ss)?ss:0);
-}
+    // ===== Skott-buffert (pågående match) =====
+    const SHOTS_BUFFER = {};
+    let CURRENT_SHOT_CODE = null;
 
-function updateShotBadge(code){
-  const el = document.getElementById(`shot-count-${code}`);
-  if (!el) return;
-  const n = (SHOTS_BUFFER[code] || []).length;
-  el.textContent = `${n} skott`;
-}
-
-function openShotModal(code){
-  CURRENT_SHOT_CODE = code;
-  document.getElementById('shot-modal-code').textContent = code;
-  document.getElementById('shot-modal').classList.remove('hidden');
-  document.getElementById('shot-modal').classList.add('flex');
-  // rensa och rita existerande punkter
-  renderShotDots();
-}
-
-function closeShotModal(){
-  document.getElementById('shot-modal').classList.add('hidden');
-  document.getElementById('shot-modal').classList.remove('flex');
-  CURRENT_SHOT_CODE = null;
-}
-
-function renderShotDots(){
-  const dots = document.getElementById('shot-dots');
-  dots.innerHTML = '';
-  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
-  const wrap = document.getElementById('shot-rink');
-  const r = wrap.getBoundingClientRect();
-  arr.forEach(s => {
-    const d = document.createElement('div');
-    d.className = 'absolute rounded-full';
-    d.style.width = '10px'; d.style.height = '10px';
-    d.style.left = `${Math.round(s.x * r.width) - 5}px`;
-    d.style.top  = `${Math.round(s.y * r.height) - 5}px`;
-    d.style.background = s.result === 'goal' ? '#ef4444' : '#1f2937'; // röd för mål, mörkgrå för övrigt
-    dots.appendChild(d);
-  });
-}
-
-document.getElementById('shot-rink').addEventListener('click', (ev) => {
-  if (!CURRENT_SHOT_CODE) return;
-  const wrap = ev.currentTarget;
-  const rect = wrap.getBoundingClientRect();
-  const x = (ev.clientX - rect.left) / rect.width;
-  const y = (ev.clientY - rect.top)  / rect.height;
-  const period  = parseInt(document.getElementById('shot-period').value, 10) || 1;
-  const timeSec = mmssToSec(document.getElementById('shot-time').value || '00:00');
-  const result  = document.getElementById('shot-result').value || 'save';
-
-  SHOTS_BUFFER[CURRENT_SHOT_CODE] ||= [];
-  SHOTS_BUFFER[CURRENT_SHOT_CODE].push({ x, y, period, time_sec: timeSec, result });
-
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-});
-
-function undoLastShot(){
-  if (!CURRENT_SHOT_CODE) return;
-  const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
-  arr.pop();
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-}
-
-function clearShotsForCurrent(){
-  if (!CURRENT_SHOT_CODE) return;
-  SHOTS_BUFFER[CURRENT_SHOT_CODE] = [];
-  updateShotBadge(CURRENT_SHOT_CODE);
-  renderShotDots();
-}
-
-// ===== Spara skott till DB efter att matchen skapats =====
-
-async function dbLoadShotsForMatch(matchId){
-  const { data, error } = await sb
-    .from('shots')
-    .select('id, goalie_id, x, y, result')
-    .eq('team_id', CURRENT_TEAM_ID)
-    .eq('match_id', matchId);
-
-  if (error) throw error;
-  return data || [];
-}
-
-
-// Shots-events per match & målvakt: { save, goal, miss, block, sog, total }
-async function dbGroupShotStatsByMatch(matches){
-  if (!matches?.length) return new Map();
-  const matchIds = matches.map(m => m.id);
-
-  const { data, error } = await sb
-    .from('shots')
-    .select('match_id, goalie_id, result')
-    .eq('team_id', CURRENT_TEAM_ID)
-    .in('match_id', matchIds);
-
-  if (error) { showError('load-shots-per-match', error); return new Map(); }
-
-  const byMatch = new Map();
-  for (const r of (data || [])) {
-    const m = byMatch.get(r.match_id) || new Map();
-    const cur = m.get(r.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
-    const key = String(r.result || '').toLowerCase();
-    if (key in cur) cur[key] += 1;
-    else cur[key] = (cur[key] || 0) + 1;
-    cur.sog   = (cur.save || 0) + (cur.goal || 0);
-    cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);
-    m.set(r.goalie_id, cur);
-    byMatch.set(r.match_id, m);
-  }
-  return byMatch;
-}
-
-// Manuella stats per match & målvakt: { minutes, saves, shots }
-async function dbLoadManualStatsByMatch(matches){
-  if (!matches?.length) return new Map();
-  const matchIds = matches.map(m => m.id);
-
-  const { data, error } = await sb
-    .from('match_goalie_stats')
-    .select('match_id, goalie_id, minutes, saves, shots')
-    .eq('team_id', CURRENT_TEAM_ID)
-    .in('match_id', matchIds);
-
-  if (error) { showError('load-manual-stats', error); return new Map(); }
-
-  const byMatch = new Map();
-  for (const r of (data || [])) {
-    const m = byMatch.get(r.match_id) || new Map();
-    m.set(r.goalie_id, {
-      minutes: r.minutes|0,
-      saves:   r.saves|0,
-      shots:   r.shots|0
-    });
-    byMatch.set(r.match_id, m);
-  }
-  return byMatch;
-}
-
-// (valfritt alias om du har kvar gamla anrop)
-const dbGroupShotsByMatch = dbGroupShotStatsByMatch;
-
-
-async function dbDeleteMatch(matchId){
-  if (!matchId) throw new Error('matchId saknas');
-  if (!CURRENT_TEAM_ID) throw new Error('CURRENT_TEAM_ID saknas');
-
-  // shots har FK on delete cascade (om du satt så i DB); annars rensas de av RLS-policy separat.
-  const { error } = await sb
-    .from('matches')
-    .delete()
-    .eq('id', matchId)
-    .eq('team_id', CURRENT_TEAM_ID);  // extra skydd
-
-  if (error) throw error;
-  const msg = 'Match borttagen.';
-  const box = document.getElementById('app-msg');
-  if (box) box.textContent = msg;
-}
-
-async function dbInsertShots(matchId){
-  if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
-  if (!matchId) throw new Error('Saknar matchId vid skottinsert');
-
-  // bygg goalie-id lookup
-  const { data: gData, error: gErr } = await sb
-    .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
-  if (gErr) throw gErr;
-
-  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code).trim().toUpperCase(), g.id]));
-
-  // konvertera buffert till rader
-  const rows = [];
-  for (const [codeRaw, shots] of Object.entries(SHOTS_BUFFER)){
-    const code = String(codeRaw).trim().toUpperCase();
-    const gid = idByCode[code];
-    if (!gid) {
-      console.warn('[dbInsertShots] Okänd målvaktkod i detta team:', code);
-      continue;
+    function mmssToSec(s){
+      const m = String(s||'').trim().split(':');
+      if (m.length !== 2) return 0;
+      const mm = parseInt(m[0],10), ss = parseInt(m[1],10);
+      return (Number.isFinite(mm)?mm:0)*60 + (Number.isFinite(ss)?ss:0);
     }
-    (shots||[]).forEach(s => {
-      rows.push({
-        team_id:  CURRENT_TEAM_ID,
-        match_id: matchId,
-        goalie_id: gid,
-        x: s.x, y: s.y,
-        period: s.period || 1,
-        time_sec: s.time_sec || 0,
-        result: s.result || 'save'
+    function updateShotBadge(code){
+      const el = document.getElementById(`shot-count-${code}`);
+      if (!el) return;
+      const n = (SHOTS_BUFFER[code] || []).length;
+      el.textContent = `${n} skott`;
+      if (CURRENT_SHOT_CODE === code){
+        const hdr = document.getElementById('shot-modal-code');
+        if (hdr) hdr.textContent = `${code} · ${n} skott`;
+      }
+    }
+    function openShotModal(code){
+      CURRENT_SHOT_CODE = code;
+      document.getElementById('shot-modal-code').textContent = code;
+      document.getElementById('shot-modal').classList.remove('hidden');
+      document.getElementById('shot-modal').classList.add('flex');
+      renderShotDots();
+    }
+    function closeShotModal(){
+      document.getElementById('shot-modal').classList.add('hidden');
+      document.getElementById('shot-modal').classList.remove('flex');
+      CURRENT_SHOT_CODE = null;
+    }
+    function renderShotDots(){
+      const dots = document.getElementById('shot-dots');
+      dots.innerHTML = '';
+      const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
+      const wrap = document.getElementById('shot-rink');
+      const r = wrap.getBoundingClientRect();
+      arr.forEach(s => {
+        const d = document.createElement('div');
+        d.className = 'absolute rounded-full';
+        d.style.width = '10px'; d.style.height = '10px';
+        d.style.left = `${Math.round(s.x * r.width) - 5}px`;
+        d.style.top  = `${Math.round(s.y * r.height) - 5}px`;
+        d.style.background = s.result === 'goal' ? '#ef4444' : '#1f2937';
+        dots.appendChild(d);
       });
+    }
+    document.getElementById('shot-rink').addEventListener('click', (ev) => {
+      if (!CURRENT_SHOT_CODE) return;
+      const rect = ev.currentTarget.getBoundingClientRect();
+      const x = (ev.clientX - rect.left) / rect.width;
+      const y = (ev.clientY - rect.top)  / rect.height;
+      const period  = parseInt(document.getElementById('shot-period').value, 10) || 1;
+      const timeSec = mmssToSec(document.getElementById('shot-time').value || '00:00');
+      const result  = document.getElementById('shot-result').value || 'save';
+      SHOTS_BUFFER[CURRENT_SHOT_CODE] ||= [];
+      SHOTS_BUFFER[CURRENT_SHOT_CODE].push({ x, y, period, time_sec: timeSec, result });
+      updateShotBadge(CURRENT_SHOT_CODE);
+      renderShotDots();
     });
-  }
+    function undoLastShot(){
+      if (!CURRENT_SHOT_CODE) return;
+      (SHOTS_BUFFER[CURRENT_SHOT_CODE] || []).pop();
+      updateShotBadge(CURRENT_SHOT_CODE);
+      renderShotDots();
+    }
+    function clearShotsForCurrent(){
+      if (!CURRENT_SHOT_CODE) return;
+      SHOTS_BUFFER[CURRENT_SHOT_CODE] = [];
+      updateShotBadge(CURRENT_SHOT_CODE);
+      renderShotDots();
+    }
 
-  // Inget att spara? Säg det högt i UI så vi vet.
-  if (!rows.length){
-    const box = document.getElementById('app-msg');
-    if (box) box.textContent = '[shots] Inga buffrade skott att spara.';
-    console.info('[dbInsertShots] 0 rader (tom buffert).');
-    return 0;
-  }
+    // ===== DB: shots helpers =====
+    async function dbLoadShotsForMatch(matchId){
+      const { data, error } = await sb
+        .from('shots')
+        .select('id, goalie_id, x, y, result')
+        .eq('team_id', CURRENT_TEAM_ID)
+        .eq('match_id', matchId);
+      if (error) throw error;
+      return data || [];
+    }
+    async function dbGroupShotStatsByMatch(matches){
+      if (!matches?.length) return new Map();
+      const matchIds = matches.map(m => m.id);
+      const { data, error } = await sb
+        .from('shots')
+        .select('match_id, goalie_id, result')
+        .eq('team_id', CURRENT_TEAM_ID)
+        .in('match_id', matchIds);
+      if (error) { showError('load-shots-per-match', error); return new Map(); }
+      const byMatch = new Map();
+      for (const r of (data || [])) {
+        const m = byMatch.get(r.match_id) || new Map();
+        const cur = m.get(r.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
+        const key = String(r.result || '').toLowerCase();
+        if (key in cur) cur[key] += 1; else cur[key] = (cur[key] || 0) + 1;
+        cur.sog   = (cur.save || 0) + (cur.goal || 0);
+        cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);
+        m.set(r.goalie_id, cur);
+        byMatch.set(r.match_id, m);
+      }
+      return byMatch;
+    }
+    async function dbLoadManualStatsByMatch(matches){
+      if (!matches?.length) return new Map();
+      const matchIds = matches.map(m => m.id);
+      const { data, error } = await sb
+        .from('match_goalie_stats')
+        .select('match_id, goalie_id, minutes, saves, shots')
+        .eq('team_id', CURRENT_TEAM_ID)
+        .in('match_id', matchIds);
+      if (error) { showError('load-manual-stats', error); return new Map(); }
+      const byMatch = new Map();
+      for (const r of (data || [])) {
+        const m = byMatch.get(r.match_id) || new Map();
+        m.set(r.goalie_id, { minutes: r.minutes|0, saves: r.saves|0, shots: r.shots|0 });
+        byMatch.set(r.match_id, m);
+      }
+      return byMatch;
+    }
 
-  console.table(rows.map(r => ({
-    match_id: r.match_id,
-    goalie_id: r.goalie_id,
-    x: +r.x?.toFixed?.(3),
-    y: +r.y?.toFixed?.(3),
-    period: r.period,
-    time_sec: r.time_sec,
-    result: r.result
-  })));
+    async function dbInsertShots(matchId){
+      if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
+      if (!matchId) throw new Error('Saknar matchId vid skottinsert');
+      const { data: gData, error: gErr } = await sb
+        .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
+      if (gErr) throw gErr;
+      const idByCode = Object.fromEntries((gData||[]).map(g => [normCode(g.code), g.id]));
+      const rows = [];
+      for (const [codeRaw, shots] of Object.entries(SHOTS_BUFFER)){
+        const gid = idByCode[normCode(codeRaw)];
+        if (!gid) continue;
+        (shots||[]).forEach(s => rows.push({
+          team_id:  CURRENT_TEAM_ID,
+          match_id: matchId,
+          goalie_id: gid,
+          x: s.x, y: s.y, period: s.period || 1, time_sec: s.time_sec || 0, result: s.result || 'save'
+        }));
+      }
+      if (!rows.length){
+        const box = document.getElementById('app-msg');
+        if (box) box.textContent = '[shots] Inga buffrade skott att spara.';
+        return 0;
+      }
+      const { data: insData, error: insErr } = await sb.from('shots').insert(rows).select('id');
+      if (insErr) { showError('insert-shots', insErr); throw insErr; }
+      const inserted = (insData || []).length;
+      const box = document.getElementById('app-msg');
+      if (box) box.textContent = `[shots] Sparade ${inserted}/${rows.length} skott till matchen.`;
+      // töm buffert + badges
+      for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
+      (GOALIES||[]).forEach(g => updateShotBadge(g.code));
+      return inserted;
+    }
 
-  // Sätt .select('id') för att få tillbaka antal insatta rader
-  const { data: insData, error: insErr } = await sb
-    .from('shots')
-    .insert(rows)
-    .select('id');
-
-  if (insErr) {
-    // Visa RLS-/policyfel tydligt
-    showError('insert-shots', insErr);
-    throw insErr;
-  }
-
-  const inserted = (insData || []).length;
-  const msg = `[shots] Sparade ${inserted}/${rows.length} skott till matchen.`;
-  console.info(msg);
-  const box = document.getElementById('app-msg');
-  if (box) box.textContent = msg;
-
-  // töm bufferten efter lyckad insert
-  for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
-  // uppdatera badges i UI
-  (GOALIES||[]).forEach(g => updateShotBadge(g.code));
-
-  return inserted;
-}
-
-
-
+    // ===== Felvisning =====
     function showError(where, err){
       console.error(where, err);
       const msg = (err && (err.message || err.details || err.hint)) || String(err);
       const box = $('#app-msg') || $('#auth-msg') || $('#team-msg');
       if (box) box.textContent = `[${where}] ${msg}`;
     }
+
+    // ===== Auth =====
+    const whoami = $('#whoami');
+    const authForms = $('#auth-forms');
+    const btnSignOut = $('#btn-signout');
+
+    $('#btn-signup').addEventListener('click', async () => {
+      $('#auth-msg').textContent = '';
+      try {
+        const { error } = await sb.auth.signUp({ email: $('#email').value.trim(), password: $('#password').value });
+        if (error) throw error;
+        $('#auth-msg').textContent = 'Konto skapat. Logga in om du inte redan är inloggad.';
+      } catch (e) { showError('signup', e); }
+    });
+
+    $('#btn-signin').addEventListener('click', async () => {
+      $('#auth-msg').textContent = '';
+      try {
+        const { error } = await sb.auth.signInWithPassword({
+          email: $('#email').value.trim(),
+          password: $('#password').value
+        });
+        if (error) throw error;
+        await boot();
+      } catch (e) { showError('signin', e); }
+    });
+
+    btnSignOut.addEventListener('click', async () => { await sb.auth.signOut(); });
 
     async function getSessionSafe(timeoutMs = 2000){
       const timeout = new Promise((_, rej) => setTimeout(()=>rej(new Error('getSession timeout')), timeoutMs));
@@ -495,38 +430,6 @@ async function dbInsertShots(matchId){
       return null;
     }
 
-    // ===== Auth UI =====
-    const whoami = $('#whoami');
-    const authForms = $('#auth-forms');
-    const btnSignOut = $('#btn-signout');
-
-    $('#btn-signup').addEventListener('click', async () => {
-      $('#auth-msg').textContent = '';
-      try {
-        const { error } = await sb.auth.signUp({ email: $('#email').value.trim(), password: $('#password').value });
-        if (error) throw error;
-        $('#auth-msg').textContent = 'Konto skapat. Logga in om du inte redan är inloggad.';
-      } catch (e) { showError('signup', e); }
-    });
-
-   // rätt
-    $('#btn-signin').addEventListener('click', async () => {
-    $('#auth-msg').textContent = '';
-    try {
-        const { data, error } = await sb.auth.signInWithPassword({
-        email: $('#email').value.trim(),
-        password: $('#password').value
-        });
-        if (error) throw error;
-        await boot(); // uppdatera UI direkt efter lyckad inloggning
-    } catch (e) {
-        showError('signin', e);
-    }
-    });
-
-
-    btnSignOut.addEventListener('click', async () => { await sb.auth.signOut(); });
-
     let CURRENT_UID = null;
     let CURRENT_TEAM_ID = null;
 
@@ -541,12 +444,10 @@ async function dbInsertShots(matchId){
           authForms.classList.add('hidden');
           $('#app').classList.remove('hidden');
           $('#team-bar').classList.remove('hidden');
-
-          await initTeams();  // team först
-          await initApp();    // sedan ladda UI-data
+          await initTeams();
+          await initApp();
         } else {
-          CURRENT_UID = null;
-          CURRENT_TEAM_ID = null;
+          CURRENT_UID = null; CURRENT_TEAM_ID = null;
           whoami.classList.add('hidden');
           btnSignOut.classList.add('hidden');
           authForms.classList.remove('hidden');
@@ -555,11 +456,7 @@ async function dbInsertShots(matchId){
         }
       } catch (e){ showError('boot', e); }
     }
-
-    sb.auth.onAuthStateChange((_ev, session) => {
-      CURRENT_UID = session?.user?.id || null;
-      boot();
-    });
+    sb.auth.onAuthStateChange((_ev, session) => { CURRENT_UID = session?.user?.id || null; boot(); });
     boot();
 
     // ===== Team-API =====
@@ -571,41 +468,32 @@ async function dbInsertShots(matchId){
       if (error) throw error;
       return (data||[]).map(r => ({ id: r.teams.id, name: r.teams.name, role: r.role, owner_id: r.teams.owner_id }));
     }
-
     async function dbCreateTeam(name){
-        const { data: t, error: te } = await sb
-            .from('teams')
-            .insert([{ name, owner_id: CURRENT_UID }])   // viktigt
-            .select('id, name, owner_id')
-            .single();
-        if (te) throw te;
-
-        const { data:{ user } } = await sb.auth.getUser();
-        const { error: me } = await sb
-            .from('team_members')
-            .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
-        if (me && me.code !== '23505') throw me;
-
-        return t;
+      const { data: t, error: te } = await sb
+        .from('teams')
+        .insert([{ name, owner_id: CURRENT_UID }])
+        .select('id, name, owner_id')
+        .single();
+      if (te) throw te;
+      const { data:{ user } } = await sb.auth.getUser();
+      const { error: me } = await sb
+        .from('team_members')
+        .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
+      if (me && me.code !== '23505') throw me;
+      return t;
     }
-
-
     async function dbInvite(email, team_id){
       const { data, error } = await sb.from('team_invites').insert([{ team_id, email }]).select('id, email, status, created_at').single();
-      if (error) throw error;
-      return data;
+      if (error) throw error; return data;
     }
-
     async function dbMyInvites(){
       const { data, error } = await sb
         .from('team_invites')
         .select('id, team_id, email, status, created_at, teams:team_id (name)')
         .eq('status','pending')
         .order('created_at',{ascending:false});
-      if (error) throw error;
-      return data || [];
+      if (error) throw error; return data || [];
     }
-
     async function dbAcceptInvite(invite_id){
       const { data: inv, error: e1 } = await sb.from('team_invites').select('id, team_id, email, status').eq('id', invite_id).single();
       if (e1) throw e1;
@@ -616,222 +504,122 @@ async function dbInsertShots(matchId){
       if (e3) throw e3;
       return true;
     }
-
     async function initTeams(){
-      const bar = $('#team-bar');
-      const sel = $('#team-select');
-      const msg = $('#team-msg');
+      const bar = $('#team-bar'); const sel = $('#team-select'); const msg = $('#team-msg');
       bar.classList.add('hidden'); msg.textContent='';
-
       let teams = await dbMyTeams();
-      // ta bort ev. dubbletter från äldre data
       teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
-
-      if (!teams.length){
-        const t = await dbCreateTeam('Mitt Team');
-        teams = await dbMyTeams();
-      }
-
+      if (!teams.length){ const t = await dbCreateTeam('Mitt Team'); teams = await dbMyTeams(); CURRENT_TEAM_ID = t.id; }
       if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
-
       sel.innerHTML = '';
       teams.forEach(t => {
         const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = `${t.name}${t.role==='owner'?' (ägare)':''}`;
-        if (t.id === CURRENT_TEAM_ID) opt.selected = true;
-        sel.appendChild(opt);
+        opt.value = t.id; opt.textContent = `${t.name}${t.role==='owner'?' (ägare)':''}`;
+        if (t.id === CURRENT_TEAM_ID) opt.selected = true; sel.appendChild(opt);
       });
-
-      sel.onchange = async () => {
-        CURRENT_TEAM_ID = sel.value;
-        try { await refreshAll(); } catch(e){ showError('team-switch', e); }
-      };
-
+      sel.onchange = async () => { CURRENT_TEAM_ID = sel.value; try { await refreshAll(); } catch(e){ showError('team-switch', e); } };
       $('#btn-new-team').onclick = async () => {
-        const name = prompt('Teamnamn:')?.trim();
-        if (!name) return;
-        try {
-          const t = await dbCreateTeam(name);
-          CURRENT_TEAM_ID = t.id;
-          await initTeams();
-          await refreshAll();
-        } catch(e){ showError('new-team', e); }
+        const name = prompt('Teamnamn:')?.trim(); if (!name) return;
+        try { const t = await dbCreateTeam(name); CURRENT_TEAM_ID = t.id; await initTeams(); await refreshAll(); }
+        catch(e){ showError('new-team', e); }
       };
-
       $('#btn-invite').onclick = async () => {
-        msg.textContent='';
-        const email = $('#invite-email').value.trim();
-        if (!email) return;
-        try {
-          await dbInvite(email, CURRENT_TEAM_ID);
-          msg.textContent = `Inbjudan skickad till ${email}. Be personen logga in här – de ser och kan acceptera inbjudan.`;
-          $('#invite-email').value='';
-        } catch(e){ showError('invite', e); }
+        msg.textContent=''; const email = $('#invite-email').value.trim(); if (!email) return;
+        try { await dbInvite(email, CURRENT_TEAM_ID); msg.textContent = `Inbjudan skickad till ${email}.`; $('#invite-email').value=''; }
+        catch(e){ showError('invite', e); }
       };
-
-      const panel = $('#invites-panel');
-      const invites = await dbMyInvites();
+      const panel = $('#invites-panel'); const invites = await dbMyInvites();
       if (invites.length){
         panel.classList.remove('hidden');
         panel.innerHTML = invites.map(i => `
           <div class="flex items-center justify-between py-1">
             <div>Inbjuden till <b>${i.teams?.name || 'Team'}</b> (${i.email})</div>
             <button data-acc="${i.id}" class="rounded-xl border px-3 py-1 text-sm">Acceptera</button>
-          </div>
-        `).join('');
+          </div>`).join('');
         panel.querySelectorAll('button[data-acc]').forEach(btn => {
           btn.onclick = async () => {
-            try {
-              await dbAcceptInvite(btn.dataset.acc);
-              panel.innerHTML = 'Inbjudan accepterad.';
-              await initTeams();
-              await refreshAll();
-            } catch(e){ showError('accept-invite', e); }
+            try { await dbAcceptInvite(btn.dataset.acc); panel.innerHTML = 'Inbjudan accepterad.'; await initTeams(); await refreshAll(); }
+            catch(e){ showError('accept-invite', e); }
           };
         });
       } else { panel.classList.add('hidden'); panel.innerHTML=''; }
-
       bar.classList.remove('hidden');
     }
 
-    // ===== DB-funktioner (team-baserade) =====
-  
-    // Seedar standardmålvakter per team – idempotent
+    // ===== DB: goalies & matches =====
     async function dbEnsureDefaultGoalies(){
-      // vilka koder finns redan för aktuellt team?
-        const { data, error } = await sb
-            .from('goalies')
-            .select('code')
-            .eq('team_id', CURRENT_TEAM_ID);
-        if (error) throw error;
-
-        const have = new Set((data || []).map(g => normCode(g.code)));
-        const wanted = [
-            { code:'LL', name:'Leo L' },
-            { code:'IE', name:'Isac E' },
-            { code:'EH', name:'Emil H' },
-            { code:'LK', name:'Leo K' },
-        ];
-
-        const missing = wanted
-            .map(g => ({ code: normCode(g.code), name: g.name }))
-            .filter(g => !have.has(g.code))
-            .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
-
-        if (missing.length){
-            // unik-regel är (team_id, code) → upsert tål dubbletter
-            const { error: insErr } = await sb
-            .from('goalies')
-            .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
-            if (insErr) throw insErr;
-        }
+      const { data, error } = await sb.from('goalies').select('code').eq('team_id', CURRENT_TEAM_ID);
+      if (error) throw error;
+      const have = new Set((data || []).map(g => normCode(g.code)));
+      const wanted = [
+        { code:'LL', name:'Leo L' }, { code:'IE', name:'Isac E' },
+        { code:'EH', name:'Emil H' }, { code:'LK', name:'Leo K' },
+      ];
+      const missing = wanted
+        .map(g => ({ code: normCode(g.code), name: g.name }))
+        .filter(g => !have.has(g.code))
+        .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
+      if (missing.length){
+        const { error: insErr } = await sb.from('goalies')
+          .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
+        if (insErr) throw insErr;
+      }
     }
-
-
-
     async function dbLoadGoalies(){
-        const { data, error } = await sb.from('goalies')
-            .select('id,code,name')
-            .eq('team_id', CURRENT_TEAM_ID)
-            .order('code');
-        if (error) throw error;
-        return (data || []).map(g => ({ ...g, code: normCode(g.code) })); // <- normalisera
+      const { data, error } = await sb.from('goalies')
+        .select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
+      if (error) throw error;
+      return (data || []).map(g => ({ ...g, code: normCode(g.code) }));
     }
-
-
     async function dbAddGoalie(code, name){
-        const CODE = normCode(code);
-        const up = await sb.from('goalies')
-            .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name },
-                    { onConflict: 'team_id,code', ignoreDuplicates: true })
-            .select('id')
-            .maybeSingle();
-
-        if (up.error && up.error.code !== '23505') throw up.error;
-        if (up.data?.id) return up.data.id;
-
-        const ex = await sb.from('goalies')
-            .select('id')
-            .eq('team_id', CURRENT_TEAM_ID)
-            .eq('code', CODE)
-            .single();
-        if (ex.error) throw ex.error;
-        return ex.data.id;
+      const CODE = normCode(code);
+      const up = await sb.from('goalies')
+        .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name },
+                { onConflict: 'team_id,code', ignoreDuplicates: true })
+        .select('id').maybeSingle();
+      if (up.error && up.error.code !== '23505') throw up.error;
+      if (up.data?.id) return up.data.id;
+      const ex = await sb.from('goalies').select('id').eq('team_id', CURRENT_TEAM_ID).eq('code', CODE).single();
+      if (ex.error) throw ex.error;
+      return ex.data.id;
     }
-
-
-
-
     async function dbAddMatch({ date, opponent, result, notes, entries }) {
-        // Skapa match
-        const { data: mData, error: mErr } = await sb
-            .from('matches')
-            .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
-            .select('id')
-            .single();
-        if (mErr) throw mErr;
-        const matchId = mData.id;
+      const { data: mData, error: mErr } = await sb
+        .from('matches')
+        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
+        .select('id')
+        .single();
+      if (mErr) throw mErr;
+      const matchId = mData.id;
 
-        // Endast rader med data
-        const filled = (entries || [])
-            .map(e => ({ ...e, code: normCode(e.code) }))
-            .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
+      const filled = (entries || [])
+        .map(e => ({ ...e, code: normCode(e.code) }))
+        .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
 
-        if (!filled.length) {
-          await dbInsertShots(matchId)
-          return matchId;
-        }  
-
-        // Läs aktuella målvakter → idByCode
+      if (filled.length){
         const readMap = async () => {
-            const { data: gData, error } = await sb.from('goalies')
-            .select('id, code')
-            .eq('team_id', CURRENT_TEAM_ID);
-            if (error) throw error;
-            return Object.fromEntries((gData || []).map(g => [normCode(g.code), g.id]));
+          const { data: gData, error } = await sb.from('goalies').select('id, code').eq('team_id', CURRENT_TEAM_ID);
+          if (error) throw error;
+          return Object.fromEntries((gData || []).map(g => [normCode(g.code), g.id]));
         };
         let idByCode = await readMap();
-
-        // Skapa ev. saknade målvakter baserat på UI-listan (namn hämtas från GOALIES)
-        const nameByCode = Object.fromEntries((GOALIES || [])
-            .map(g => [normCode(g.code), g.name]));
-
-        const missing = [...new Set(filled
-            .filter(e => !idByCode[e.code])
-            .map(e => e.code))];
-
-        for (const code of missing){
-            const name = nameByCode[code] || code;
-            await dbAddGoalie(code, name); // idempotent
-        }
-
-        // Läs om mappningen (nu ska alla koder ha id)
+        const nameByCode = Object.fromEntries((GOALIES || []).map(g => [normCode(g.code), g.name]));
+        const missing = [...new Set(filled.filter(e => !idByCode[e.code]).map(e => e.code))];
+        for (const code of missing){ await dbAddGoalie(code, nameByCode[code] || code); }
         idByCode = await readMap();
-
         const rows = filled.map(e => {
-            const gid = idByCode[e.code];
-            if (!gid) throw new Error(`Okänd målvaktkod: ${e.code} (finns inte i teamet)`);
-            return {
-            team_id:  CURRENT_TEAM_ID,
-            match_id: matchId,
-            goalie_id: gid,
-            minutes:  e.minutes|0,
-            saves:    e.saves|0,
-            shots:    e.shots|0,
-            };
+          const gid = idByCode[e.code];
+          if (!gid) throw new Error(`Okänd målvaktkod: ${e.code}`);
+          return { team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: gid,
+                   minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0 };
         });
-
         const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
-        await dbInsertShots(matchId);
         if (sErr) throw sErr;
-        return matchId;
+      }
+
+      await dbInsertShots(matchId);
+      return matchId;
     }
-
-
-
-
-
     async function dbListMatches(){
       const { data, error } = await sb
         .from('matches')
@@ -845,162 +633,102 @@ async function dbInsertShots(matchId){
         .eq('team_id', CURRENT_TEAM_ID)
         .order('date',{ascending:false});
       if (error) throw error;
-
       return (data||[]).map(m => ({
-        id: m.id,
-        date: m.date,
-        opponent: m.opponent,
-        result: m.result,
-        notes: m.notes,
+        id: m.id, date: m.date, opponent: m.opponent, result: m.result, notes: m.notes,
         entries: (m.match_goalie_stats||[]).map(e => ({
-          code: e.goalies.code,
-          name: e.goalies.name,
-          minutes: e.minutes,
-          saves: e.saves,
-          shots: e.shots
+          code: e.goalies.code, name: e.goalies.name, minutes: e.minutes, saves: e.saves, shots: e.shots
         }))
       }));
     }
-
     async function dbDeleteMatch(matchId){
+      if (!matchId) throw new Error('matchId saknas');
       const { error } = await sb.from('matches').delete().eq('id', matchId).eq('team_id', CURRENT_TEAM_ID);
       if (error) throw error;
+      if (window.__shots_cache) window.__shots_cache.delete(matchId);
+      const box = document.getElementById('app-msg'); if (box) box.textContent = 'Match borttagen.';
     }
 
     // ===== Export / Import =====
     function download(filename, content, mime){
       const blob = new Blob([content], { type: (mime || 'text/plain') + ';charset=utf-8' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
       URL.revokeObjectURL(url);
     }
-
     async function exportJSON(){
       const goalies = await dbLoadGoalies();
       const matches = await dbListMatches();
       const payload = { exported_at: new Date().toISOString(), team_id: CURRENT_TEAM_ID, goalies, matches };
       download('mv_export.json', JSON.stringify(payload, null, 2), 'application/json');
     }
-
     function escCSV(v){ const s = String(v ?? ''); return /[;"\n]/.test(s) ? '"' + s.replaceAll('"','""') + '"' : s; }
     function buildCSV(goalies, matches){
-      const head = ['date','opponent','result',
-        ...goalies.flatMap(g => [`${g.code}_minutes`, `${g.code}_saves`, `${g.code}_shots`]),
-        'notes'
-      ];
+      const head = ['date','opponent','result', ...goalies.flatMap(g => [`${g.code}_minutes`, `${g.code}_saves`, `${g.code}_shots`]), 'notes'];
       const lines = [head.join(';')];
-
       for (const m of matches){
         const map = Object.fromEntries((m.entries || []).map(e => [e.code, e]));
         const cols = [
-          `"${m.date}"`,                           // behåll datum som text i Excel
-          escCSV(m.opponent || ''),                // säkra semikolon/citat-tecken
-          m.result,
-          ...goalies.flatMap(g => {
-            const e = map[g.code] || {};
-            return [e.minutes ?? '', e.saves ?? '', e.shots ?? ''];
-          }),
+          `"${m.date}"`, escCSV(m.opponent || ''), m.result,
+          ...goalies.flatMap(g => { const e = map[g.code] || {}; return [e.minutes ?? '', e.saves ?? '', e.shots ?? '']; }),
           escCSV(m.notes || '')
         ];
         lines.push(cols.join(';'));
+      }
+      return lines.join('\r\n');
     }
-  // CRLF för Excel
-  return lines.join('\r\n');
-}
-
-
     async function exportCSV(){
       const goalies = await dbLoadGoalies();
       const matches = await dbListMatches();
       const csv = buildCSV(goalies, matches);
-
-      const BOM = '\uFEFF'; // UTF-8 BOM → rätt å/ä/ö i Excel
+      const BOM = '\uFEFF'; // rätt å/ä/ö i Excel
       download('mv_export.csv', BOM + csv, 'text/csv');
     }
-
-
     function bindExportButtons(){
       const j = $('#btn-exp-json'), c = $('#btn-exp-csv');
       if (j && !j._bound){ j.addEventListener('click', ()=>exportJSON().catch(e=>showError('export-json', e))); j._bound=true; }
       if (c && !c._bound){ c.addEventListener('click', ()=>exportCSV().catch(e=>showError('export-csv', e)));   c._bound=true; }
     }
 
-    // ---- Import helpers (goalies map + upsert match) ----
+    // ---- Import helpers ----
     async function dbGetGoalieMapEnsure(codesAndNames){
-        const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID);
-        if (error) throw error;
-        const have = new Map((gData || []).map(g => [normCode(g.code), g]));
-        const missing = (codesAndNames || [])
-            .map(x => ({ code: normCode(x.code), name: x.name }))
-            .filter(x => x.code && !have.has(x.code));
-
-        if (missing.length){
-            const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
-            const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
-            if (e2) throw e2;
-            (ins || []).forEach(g => have.set(normCode(g.code), g));
-        }
-        return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
+      const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID);
+      if (error) throw error;
+      const have = new Map((gData || []).map(g => [normCode(g.code), g]));
+      const missing = (codesAndNames || [])
+        .map(x => ({ code: normCode(x.code), name: x.name }))
+        .filter(x => x.code && !have.has(x.code));
+      if (missing.length){
+        const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
+        const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
+        if (e2) throw e2;
+        (ins || []).forEach(g => have.set(normCode(g.code), g));
+      }
+      return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
     }
-
-
     async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
       let { data: found, error: sErr } = await sb
-        .from('matches')
-        .select('id')
-        .eq('team_id', CURRENT_TEAM_ID)
-        .eq('date', date)
-        .eq('opponent', opponent || '')
-        .limit(1)
-        .maybeSingle();
+        .from('matches').select('id')
+        .eq('team_id', CURRENT_TEAM_ID).eq('date', date).eq('opponent', opponent || '').limit(1).maybeSingle();
       if (sErr && sErr.code !== 'PGRST116') throw sErr;
-      if (found?.id){
-        await sb.from('matches').update({ result, notes }).eq('id', found.id);
-        return found.id;
-      }
+      if (found?.id){ await sb.from('matches').update({ result, notes }).eq('id', found.id); return found.id; }
       const { data: ins, error } = await sb
-        .from('matches')
-        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent: opponent||'', result, notes }])
-        .select('id')
-        .single();
-      if (error) throw error;
-      return ins.id;
+        .from('matches').insert([{ team_id: CURRENT_TEAM_ID, date, opponent: opponent||'', result, notes }])
+        .select('id').single();
+      if (error) throw error; return ins.id;
     }
-
-    // ---- Import JSON ----
     async function importJSONFile(file){
-      const text = await file.text();
-      const obj = JSON.parse(text);
-      const goalies = obj.goalies || [];
-      const matches = obj.matches || [];
-
-      const idByCode = await dbGetGoalieMapEnsure(goalies.map(g => ({code:g.code, name:g.name})));
-
-      for (const m of matches){
-        const matchId = await dbFindOrCreateMatchByKey({
-          date: m.date,
-          opponent: m.opponent || '',
-          result: m.result || 'V',
-          notes: m.notes || ''
-        });
+      const text = await file.text(); const obj = JSON.parse(text);
+      const idByCode = await dbGetGoalieMapEnsure((obj.goalies||[]).map(g => ({code:g.code, name:g.name})));
+      for (const m of (obj.matches || [])){
+        const matchId = await dbFindOrCreateMatchByKey({ date: m.date, opponent: m.opponent||'', result: m.result||'V', notes: m.notes||'' });
         await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
         const rows = (m.entries||[]).map(e => ({
-          team_id: CURRENT_TEAM_ID,
-          match_id: matchId,
-          goalie_id: idByCode[e.code],
-          minutes: e.minutes|0,
-          saves:   e.saves|0,
-          shots:   e.shots|0
+          team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: idByCode[e.code],
+          minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0
         }));
-        if (rows.length){
-          const { error } = await sb.from('match_goalie_stats').insert(rows);
-          if (error) throw error;
-        }
+        if (rows.length){ const { error } = await sb.from('match_goalie_stats').insert(rows); if (error) throw error; }
       }
     }
-
-    // ---- Import CSV ----
     function parseCSVLine(line){
       const out=[]; let cur=''; let inQ=false;
       for (let i=0;i<line.length;i++){
@@ -1016,7 +744,6 @@ async function dbInsertShots(matchId){
       }
       out.push(cur); return out;
     }
-
     async function importCSVFile(file){
       const text = await file.text();
       const lines = text.split(/\r?\n/).filter(Boolean);
@@ -1029,20 +756,15 @@ async function dbInsertShots(matchId){
         if (m && !codes.includes(m[1])) codes.push(m[1]);
       }
       const idByCode = await dbGetGoalieMapEnsure(codes.map(code => ({code, name: code})));
-
       for (let li=1; li<lines.length; li++){
         const cols = parseCSVLine(lines[li]);
         const date = cols[idx['date']] || today();
         const opponent = cols[idx['opponent']] || '';
         const result = cols[idx['result']] || 'V';
         const notes  = cols[idx['notes']] || '';
-
         const matchId = await dbFindOrCreateMatchByKey({ date, opponent, result, notes });
-
         const rows = codes.map(code => ({
-          team_id: CURRENT_TEAM_ID,
-          match_id: matchId,
-          goalie_id: idByCode[code],
+          team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: idByCode[code],
           minutes: Number(cols[idx[`${code}_minutes`]]||0)||0,
           saves:   Number(cols[idx[`${code}_saves`]]||0)||0,
           shots:   Number(cols[idx[`${code}_shots`]]||0)||0
@@ -1074,29 +796,20 @@ async function dbInsertShots(matchId){
         await dbEnsureDefaultGoalies();
         GOALIES = await dbLoadGoalies();
         renderGoalieInputs();
+        bindExportButtons();
         await refreshAll();
       } catch (e){ showError('initApp', e); }
 
       $('#reset-entries').onclick = () => {
-        GOALIES.forEach(g => {
-          $('#m-'+g.code).value='0';
-          $('#s-'+g.code).value='0';
-          $('#t-'+g.code).value='0';
-        });
+        GOALIES.forEach(g => { $('#m-'+g.code).value='0'; $('#s-'+g.code).value='0'; $('#t-'+g.code).value='0'; });
       };
-
       $('#btn-add-goalie').onclick = async () => {
         const code = normCode(prompt('Kod (t.ex. LL):') || '');
         const name = (prompt('Namn (t.ex. Leo L):') || '').trim();
         if (!code || !name) return;
-        try {
-            await dbAddGoalie(code, name);
-            GOALIES = await dbLoadGoalies();
-            renderGoalieInputs();
-        } catch (e) { showError('add-goalie', e); }
+        try { await dbAddGoalie(code, name); GOALIES = await dbLoadGoalies(); renderGoalieInputs(); }
+        catch (e) { showError('add-goalie', e); }
       };
-
-
       $('#add-match').onclick = async () => {
         $('#app-msg').textContent = '';
         const entries = GOALIES.map(g => ({
@@ -1106,52 +819,36 @@ async function dbInsertShots(matchId){
           shots:   num($('#t-'+g.code).value),
         }));
         try {
-          await dbAddMatch({
-            date: $('#f-date').value || today(),
-            opponent: $('#f-opp').value || '',
-            result: formResult,
-            notes: $('#f-notes').value || '',
-            entries
-          });
+          await dbAddMatch({ date: $('#f-date').value || today(), opponent: $('#f-opp').value || '',
+                             result: formResult, notes: $('#f-notes').value || '', entries });
           document.querySelectorAll('#goalie-grid input').forEach(i => i.value='0');
           $('#f-opp').value=''; $('#f-notes').value='';
           await refreshAll();
         } catch (e){ showError('add-match', e); }
       };
 
-      // Export/Import-bindningar
-      bindExportButtons();
-      const impJ = $('#imp-json');
-      const impC = $('#imp-csv');
+      // Import-bindningar
+      const impJ = $('#imp-json'), impC = $('#imp-csv');
       if (impJ && !impJ._bound){
         impJ.addEventListener('change', async (e)=>{
-          $('#app-msg').textContent='';
-          try {
+          $('#app-msg').textContent=''; try {
             const f = e.target.files?.[0]; if (!f) return;
-            await importJSONFile(f);
-            await refreshAll();
-          } catch (err){ showError('import-json', err); }
-          finally { e.target.value=''; }
-        });
-        impJ._bound=true;
+            await importJSONFile(f); await refreshAll();
+          } catch (err){ showError('import-json', err); } finally { e.target.value=''; }
+        }); impJ._bound=true;
       }
       if (impC && !impC._bound){
         impC.addEventListener('change', async (e)=>{
-          $('#app-msg').textContent='';
-          try {
+          $('#app-msg').textContent=''; try {
             const f = e.target.files?.[0]; if (!f) return;
-            await importCSVFile(f);
-            await refreshAll();
-          } catch (err){ showError('import-csv', err); }
-          finally { e.target.value=''; }
-        });
-        impC._bound=true;
+            await importCSVFile(f); await refreshAll();
+          } catch (err){ showError('import-csv', err); } finally { e.target.value=''; }
+        }); impC._bound=true;
       }
     }
 
     function renderGoalieInputs(){
-      const grid = $('#goalie-grid');
-      grid.innerHTML = '';
+      const grid = $('#goalie-grid'); grid.innerHTML = '';
       GOALIES.forEach(g => {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-12 items-center gap-2';
@@ -1167,390 +864,255 @@ async function dbInsertShots(matchId){
             <span id="shot-count-${g.code}" class="rounded-lg border px-2 py-0.5">0 skott</span>
             <button type="button" id="btn-shot-${g.code}" class="rounded-lg border px-2 py-0.5">+ Skott</button>
           </span>
-    `;
-    grid.appendChild(row);
-
-    // Se till att vi har en buffert-array för denna målvakt
-    SHOTS_BUFFER[g.code] ||= [];
-
-    // Koppla knappen till rätt målvakt
-    const btn = row.querySelector(`#btn-shot-${g.code}`);
-    btn.addEventListener('click', () => openShotModal(g.code));
-
-    // Uppdatera badge om det finns buffrade skott
-    updateShotBadge(g.code);
-  });
-}
-
-
-    // ===== Graf: Rädd% över tid (Chart.js) =====
-    let svpctChart = null;
-
-    function pctNum(saves, shots){
-      return shots > 0 ? +(((saves / shots) * 100).toFixed(2)) : null;
+        `;
+        grid.appendChild(row);
+        SHOTS_BUFFER[g.code] ||= [];
+        row.querySelector(`#btn-shot-${g.code}`).addEventListener('click', () => openShotModal(g.code));
+        updateShotBadge(g.code);
+      });
     }
 
-    // 3-matchers glidande medel (valfritt fönster)
-    function movingAvg(arr, window=3){
+    // ===== Graf: Rädd% över tid =====
+    let svpctChart = null;
+    const pctNum = (saves, shots) => shots > 0 ? +(((saves / shots) * 100).toFixed(2)) : null;
+    const movingAvg = (arr, window=3) => {
       const out = [];
       for (let i=0;i<arr.length;i++){
         const slice = arr.slice(Math.max(0, i-window+1), i+1).filter(v => v != null);
         out.push(slice.length ? +(slice.reduce((a,b)=>a+b,0)/slice.length).toFixed(2) : null);
       }
       return out;
-    }
-
+    };
     function updateChartSelect(){
-      const sel = document.getElementById('chart-goalie');
-      if (!sel) return;
-      const current = sel.value;
-      sel.innerHTML = '';
-      (GOALIES || []).forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g.code; opt.textContent = `${g.name} (${g.code})`;
-        sel.appendChild(opt);
-      });
-      // behåll tidigare val om möjligt, annars välj första
+      const sel = document.getElementById('chart-goalie'); if (!sel) return;
+      const current = sel.value; sel.innerHTML = '';
+      (GOALIES || []).forEach(g => { const opt = document.createElement('option'); opt.value = g.code; opt.textContent = `${g.name} (${g.code})`; sel.appendChild(opt); });
       if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
       else if (GOALIES?.[0]) sel.value = GOALIES[0].code;
     }
-
     function renderSavePctChart(matches){
       const sel = document.getElementById('chart-goalie');
       const canvas = document.getElementById('svpctChart');
       const msg = document.getElementById('chart-empty');
       if (!sel || !canvas) return;
-
       const code = (sel.value || (GOALIES?.[0]?.code) || '').toUpperCase();
       const sorted = [...(matches || [])].sort((a,b)=>a.date.localeCompare(b.date));
-      const labels = [];
-      const values = [];
-
+      const labels = [], values = [];
       sorted.forEach(m => {
         const e = (m.entries || []).find(x => (x.code || '').toUpperCase() === code);
-        if (e && (e.saves != null) && (e.shots != null)){
-          labels.push(m.date);
-          values.push(pctNum(e.saves, e.shots)); // kan bli null vid 0 skott
-        }
+        if (e && (e.saves != null) && (e.shots != null)){ labels.push(m.date); values.push(pctNum(e.saves, e.shots)); }
       });
-
-      const hasData = values.some(v => v != null);
-      msg?.classList.toggle('hidden', hasData);
-
-      if (svpctChart){ svpctChart.destroy(); svpctChart = null; }
-      if (!hasData) return;
-
+      const hasData = values.some(v => v != null); msg?.classList.toggle('hidden', hasData);
+      if (svpctChart){ svpctChart.destroy(); svpctChart = null; } if (!hasData) return;
       const ma = movingAvg(values, 3);
-
       svpctChart = new Chart(canvas.getContext('2d'), {
         type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label: `Rädd% (${code})`, data: values, spanGaps: true, tension: 0.3, pointRadius: 3 },
-            { label: '3-matchers snitt', data: ma, spanGaps: true, borderDash: [6,4], tension: 0.3, pointRadius: 0 }
-          ]
-        },
+        data: { labels, datasets: [
+          { label: `Rädd% (${code})`, data: values, spanGaps: true, tension: 0.3, pointRadius: 3 },
+          { label: '3-matchers snitt', data: ma, spanGaps: true, borderDash: [6,4], tension: 0.3, pointRadius: 0 }
+        ]},
         options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { suggestedMin: 60, suggestedMax: 100, ticks: { callback: v => v + '%' } },
-            x: { ticks: { autoSkip: true, maxRotation: 0 } }
-          },
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed?.(2) ?? '–'}%` } }
-          }
+          responsive: true, maintainAspectRatio: false,
+          scales: { y: { suggestedMin: 60, suggestedMax: 100, ticks: { callback: v => v + '%' } }, x: { ticks: { autoSkip: true, maxRotation: 0 } } },
+          plugins: { legend: { position: 'bottom' },
+            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed?.(2) ?? '–'}%` } } }
         }
       });
     }
+    document.addEventListener('change', (e)=>{ if (e.target && e.target.id === 'chart-goalie'){ renderSavePctChart(window.__LATEST_MATCHES__ || []); } });
 
-    // redraw när man byter målvakt
-    document.addEventListener('change', (e)=>{
-      if (e.target && e.target.id === 'chart-goalie'){
-        renderSavePctChart(window.__LATEST_MATCHES__ || []);
-      }
-    });
-
+    // ===== Skottkarta renderers =====
     function renderShotMap(containerEl, shots, goalieById, goalieFilter='ALL'){
-        containerEl.innerHTML = '';
-
-        const W = containerEl.clientWidth || 360;
-        const H = Math.round(W * 0.6);
-        const pad = 8;
-
-        const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-        svg.setAttribute('width', '100%');
-        svg.setAttribute('height', H);
-
-        // Rink (enkel)
-        const bg = document.createElementNS(svg.namespaceURI, 'rect');
-        bg.setAttribute('x', 0); bg.setAttribute('y', 0);
-        bg.setAttribute('width', W); bg.setAttribute('height', H);
-        bg.setAttribute('fill', 'white'); bg.setAttribute('rx', 18); bg.setAttribute('ry', 18);
-        bg.setAttribute('stroke', '#d1d5db'); // gray-300
-        svg.appendChild(bg);
-
-        // Center line
-        const cl = document.createElementNS(svg.namespaceURI, 'line');
-        cl.setAttribute('x1', W/2); cl.setAttribute('x2', W/2);
-        cl.setAttribute('y1', 0); cl.setAttribute('y2', H);
-        cl.setAttribute('stroke', '#ef4444'); cl.setAttribute('stroke-width', '2');
-        svg.appendChild(cl);
-
-        // Målområdes-linjer (approx)
-        const l1 = document.createElementNS(svg.namespaceURI, 'line');
-        l1.setAttribute('x1', pad*2); l1.setAttribute('x2', pad*2);
-        l1.setAttribute('y1', pad); l1.setAttribute('y2', H-pad);
-        l1.setAttribute('stroke', '#60a5fa'); l1.setAttribute('stroke-width', '2');
-        svg.appendChild(l1);
-
-        const l2 = document.createElementNS(svg.namespaceURI, 'line');
-        l2.setAttribute('x1', W - pad*2); l2.setAttribute('x2', W - pad*2);
-        l2.setAttribute('y1', pad); l2.setAttribute('y2', H - pad);
-        l2.setAttribute('stroke', '#60a5fa'); l2.setAttribute('stroke-width', '2');
-        svg.appendChild(l2);
-
-        // Rita markörer
-        const drawX = (x, y, size, color) => {
-            const g = document.createElementNS(svg.namespaceURI, 'g');
-            const lA = document.createElementNS(svg.namespaceURI, 'line');
-            const lB = document.createElementNS(svg.namespaceURI, 'line');
-            lA.setAttribute('x1', x-size); lA.setAttribute('y1', y-size);
-            lA.setAttribute('x2', x+size); lA.setAttribute('y2', y+size);
-            lB.setAttribute('x1', x-size); lB.setAttribute('y1', y+size);
-            lB.setAttribute('x2', x+size); lB.setAttribute('y2', y-size);
-            [lA,lB].forEach(l => { l.setAttribute('stroke', color); l.setAttribute('stroke-width','2'); l.setAttribute('stroke-linecap','round'); });
-            g.appendChild(lA); g.appendChild(lB); svg.appendChild(g);
-        };
-
-        const drawCircle = (x, y, r, color, fill=false) => {
-            const c = document.createElementNS(svg.namespaceURI, 'circle');
-            c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
-            c.setAttribute('stroke', color); c.setAttribute('stroke-width', '2');
-            c.setAttribute('fill', fill ? color : 'none');
-            c.setAttribute('fill-opacity', fill ? '0.15' : '0');
-            svg.appendChild(c);
-        };
-
-        const drawSquare = (x, y, size, color) => {
-            const s = document.createElementNS(svg.namespaceURI, 'rect');
-            s.setAttribute('x', x-size); s.setAttribute('y', y-size);
-            s.setAttribute('width', size*2); s.setAttribute('height', size*2);
-            s.setAttribute('stroke', color); s.setAttribute('stroke-width','2');
-            s.setAttribute('fill','none'); svg.appendChild(s);
-        };
-
-        const filtered = shots.filter(s => goalieFilter === 'ALL' || s.goalie_id === goalieFilter);
-
-        for (const s of filtered){
-            const x = pad + (W - pad*2) * (Number(s.x) || 0);
-            const y = pad + (H - pad*2) * (Number(s.y) || 0);
-
-            switch ((s.result || '').toLowerCase()){
-            case 'goal': drawX(x, y, 6, '#ef4444'); break;          // mål = rött X
-            case 'save': drawCircle(x, y, 5, '#10b981', true); break; // räddning = grön fylld cirkel
-            case 'block': drawSquare(x, y, 5, '#3b82f6'); break;     // block = blå fyrkant
-            case 'miss':
-            default: drawCircle(x, y, 5, '#6b7280', false); break;   // miss = grå ring
-            }
+      containerEl.innerHTML = '';
+      const W = containerEl.clientWidth || 360, H = Math.round(W * 0.6), pad = 8;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', '100%'); svg.setAttribute('height', H);
+      const bg = document.createElementNS(svg.namespaceURI, 'rect');
+      bg.setAttribute('x', 0); bg.setAttribute('y', 0); bg.setAttribute('width', W); bg.setAttribute('height', H);
+      bg.setAttribute('fill', 'white'); bg.setAttribute('rx', 18); bg.setAttribute('ry', 18); bg.setAttribute('stroke', '#d1d5db'); svg.appendChild(bg);
+      const cl = document.createElementNS(svg.namespaceURI, 'line');
+      cl.setAttribute('x1', W/2); cl.setAttribute('x2', W/2); cl.setAttribute('y1', 0); cl.setAttribute('y2', H);
+      cl.setAttribute('stroke', '#ef4444'); cl.setAttribute('stroke-width', '2'); svg.appendChild(cl);
+      const l1 = document.createElementNS(svg.namespaceURI, 'line');
+      l1.setAttribute('x1', pad*2); l1.setAttribute('x2', pad*2); l1.setAttribute('y1', pad); l1.setAttribute('y2', H-pad);
+      l1.setAttribute('stroke', '#60a5fa'); l1.setAttribute('stroke-width', '2'); svg.appendChild(l1);
+      const l2 = document.createElementNS(svg.namespaceURI, 'line');
+      l2.setAttribute('x1', W - pad*2); l2.setAttribute('x2', W - pad*2); l2.setAttribute('y1', pad); l2.setAttribute('y2', H - pad);
+      l2.setAttribute('stroke', '#60a5fa'); l2.setAttribute('stroke-width', '2'); svg.appendChild(l2);
+      const drawX = (x, y, size, color) => { const g = document.createElementNS(svg.namespaceURI, 'g');
+        const lA = document.createElementNS(svg.namespaceURI, 'line'); const lB = document.createElementNS(svg.namespaceURI, 'line');
+        lA.setAttribute('x1', x-size); lA.setAttribute('y1', y-size); lA.setAttribute('x2', x+size); lA.setAttribute('y2', y+size);
+        lB.setAttribute('x1', x-size); lB.setAttribute('y1', y+size); lB.setAttribute('x2', x+size); lB.setAttribute('y2', y-size);
+        [lA,lB].forEach(l => { l.setAttribute('stroke', color); l.setAttribute('stroke-width','2'); l.setAttribute('stroke-linecap','round'); });
+        g.appendChild(lA); g.appendChild(lB); svg.appendChild(g); };
+      const drawCircle = (x, y, r, color, fill=false) => { const c = document.createElementNS(svg.namespaceURI, 'circle');
+        c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
+        c.setAttribute('stroke', color); c.setAttribute('stroke-width', '2');
+        c.setAttribute('fill', fill ? color : 'none'); c.setAttribute('fill-opacity', fill ? '0.15' : '0'); svg.appendChild(c); };
+      const drawSquare = (x, y, size, color) => { const s = document.createElementNS(svg.namespaceURI, 'rect');
+        s.setAttribute('x', x-size); s.setAttribute('y', y-size); s.setAttribute('width', size*2); s.setAttribute('height', size*2);
+        s.setAttribute('stroke', color); s.setAttribute('stroke-width','2'); s.setAttribute('fill','none'); svg.appendChild(s); };
+      const filtered = shots.filter(s => goalieFilter === 'ALL' || s.goalie_id === goalieFilter);
+      for (const s of filtered){
+        const x = pad + (W - pad*2) * (Number(s.x) || 0);
+        const y = pad + (H - pad*2) * (Number(s.y) || 0);
+        switch ((s.result || '').toLowerCase()){
+          case 'goal':  drawX(x, y, 6, '#ef4444'); break;
+          case 'save':  drawCircle(x, y, 5, '#10b981', true); break;
+          case 'block': drawSquare(x, y, 5, '#3b82f6'); break;
+          case 'miss':
+          default:      drawCircle(x, y, 5, '#6b7280', false); break;
         }
-
-        containerEl.appendChild(svg);
+      }
+      containerEl.appendChild(svg);
     }
-
     function renderShotLegend(legendEl, shots, goalieFilter='ALL'){
-        const counts = { save:0, goal:0, miss:0, block:0 };
-        for (const s of shots){
-            if (goalieFilter !== 'ALL' && s.goalie_id !== goalieFilter) continue;
-            const k = (s.result || '').toLowerCase();
-            if (k in counts) counts[k] += 1;
-        }
-        legendEl.innerHTML =
-            `Räddn: ${counts.save} • Mål: ${counts.goal} • Miss: ${counts.miss} • Block: ${counts.block}`;
+      const counts = { save:0, goal:0, miss:0, block:0 };
+      for (const s of shots){
+        if (goalieFilter !== 'ALL' && s.goalie_id !== goalieFilter) continue;
+        const k = (s.result || '').toLowerCase(); if (k in counts) counts[k] += 1;
+      }
+      legendEl.innerHTML = `Räddn: ${counts.save} • Mål: ${counts.goal} • Miss: ${counts.miss} • Block: ${counts.block}`;
     }
 
+    // ===== Matchlista (med summa + skottkarta + delete) =====
+    function renderMatchList(matches, mapsObj = {}){
+      const { shotStatsByMatch = new Map(), manualStatsByMatch = new Map() } = mapsObj;
+      const wrap = document.getElementById('match-list'); wrap.innerHTML = '';
+      const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
 
-
-    function renderMatchList(matches, maps = {}){
-        const { shotStatsByMatch = new Map(), manualStatsByMatch = new Map() } = maps;
-        const wrap = document.getElementById('match-list');
-        wrap.innerHTML = '';
-
-        const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
-
-        for (const m of matches){
-            const card = document.createElement('div');
-            card.className = 'rounded-2xl border p-4 mb-4';
-
-            const hdr = `
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
-                <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
-                </div>
-                <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+      for (const m of matches){
+        const card = document.createElement('div'); card.className = 'rounded-2xl border p-4 mb-4';
+        const hdr = `
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
+              <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
             </div>
-            `;
+            <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+          </div>`;
+        const sMap = shotStatsByMatch.get(m.id)  || new Map();
+        const gMap = manualStatsByMatch.get(m.id) || new Map();
+        const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
+        let rowsHtml = '';
+        let totMin = 0, totSaves = 0, totGoals = 0;
 
-            const sMap = shotStatsByMatch.get(m.id)  || new Map(); // events
-            const gMap = manualStatsByMatch.get(m.id) || new Map(); // manuellt
+        if (unionIds.size){
+          for (const gid of unionIds){
+            const g  = goalieById.get(gid) || {};
+            const ev = sMap.get(gid) || null;
+            const ms = gMap.get(gid) || null;
 
-            const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
-            let rowsHtml = '';
+            const minutes = Number(ms?.minutes ?? 0);
+            const mSaves  = Number(ms?.saves ?? 0);
+            const mShots  = Number(ms?.shots ?? 0);
 
-            // totals
-            let totMin = 0, totSaves = 0, totGoals = 0;
+            let saves, goals, sog;
+            if (ev){ saves = Number(ev.save||0); goals = Number(ev.goal||0); sog = Number(ev.sog||(saves+goals)); }
+            else { saves = mSaves; goals = Math.max(0, mShots - mSaves); sog = Math.max(0, mShots); }
 
-            if (unionIds.size){
-            for (const gid of unionIds){
-                const g  = goalieById.get(gid) || {};
-                const ev = sMap.get(gid) || null;
-                const ms = gMap.get(gid) || null;
+            totMin += minutes; totSaves += saves; totGoals += goals;
 
-                const minutes = Number(ms?.minutes ?? 0);
-                const mSaves  = Number(ms?.saves ?? 0);
-                const mShots  = Number(ms?.shots ?? 0);
-
-                // välj källa för räddn/skott
-                let saves, goals, sog;
-                if (ev){
-                saves = Number(ev.save || 0);
-                goals = Number(ev.goal || 0);
-                sog   = Number(ev.sog  || (saves + goals));
-                } else {
-                saves = mSaves;
-                goals = Math.max(0, mShots - mSaves);
-                sog   = Math.max(0, mShots);
-                }
-
-                // summera totals
-                totMin   += minutes;
-                totSaves += saves;
-                totGoals += goals;
-
-                const name = g.name || 'Okänd målvakt';
-                const code = g.code || '';
-
-                rowsHtml += `
-                <div class="grid grid-cols-12 text-sm py-1">
-                    <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                    <div class="col-span-2 text-center">${minutes || '–'}</div>
-                    <div class="col-span-2 text-center">${saves}</div>
-                    <div class="col-span-2 text-center font-medium">
-                    ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
-                    </div>
-                </div>
-                `;
-            }
-
-            // summa-rad
-            const totSOG = totSaves + totGoals;
+            const name = g.name || 'Okänd målvakt', code = g.code || '';
             rowsHtml += `
-                <div class="grid grid-cols-12 text-sm py-1 border-t mt-1 pt-1 font-medium">
-                <div class="col-span-6 text-right">Summa</div>
-                <div class="col-span-2 text-center">${totMin || '–'}</div>
-                <div class="col-span-2 text-center">${totSaves}</div>
-                <div class="col-span-2 text-center">${totSOG}${totGoals ? `<span class="ml-1 text-xs text-red-600">(${totGoals} mål)</span>` : ''}</div>
+              <div class="grid grid-cols-12 text-sm py-1">
+                <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
+                <div class="col-span-2 text-center">${minutes || '–'}</div>
+                <div class="col-span-2 text-center">${saves}</div>
+                <div class="col-span-2 text-center font-medium">
+                  ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
                 </div>
-            `;
-            } else {
-            rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
-            }
-
-            card.innerHTML = hdr + `
-            <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
-                <div class="col-span-6">Målvakt</div>
-                <div class="col-span-2 text-center">Min</div>
-                <div class="col-span-2 text-center">Räddn</div>
-                <div class="col-span-2 text-center">Skott</div>
-            </div>
-            ${rowsHtml}
-            <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
-            `;
-
-            wrap.appendChild(card);
+              </div>`;
+          }
+          const totSOG = totSaves + totGoals;
+          rowsHtml += `
+            <div class="grid grid-cols-12 text-sm py-1 border-t mt-1 pt-1 font-medium">
+              <div class="col-span-6 text-right">Summa</div>
+              <div class="col-span-2 text-center">${totMin || '–'}</div>
+              <div class="col-span-2 text-center">${totSaves}</div>
+              <div class="col-span-2 text-center">${totSOG}${totGoals ? `<span class="ml-1 text-xs text-red-600">(${totGoals} mål)</span>` : ''}</div>
+            </div>`;
+        } else {
+          rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
         }
-        
-        // shots toggle + rendering
-        if (!wrap.__hasShotsHandler__) {
+
+        card.innerHTML = hdr + `
+          <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
+            <div class="col-span-6">Målvakt</div>
+            <div class="col-span-2 text-center">Min</div>
+            <div class="col-span-2 text-center">Räddn</div>
+            <div class="col-span-2 text-center">Skott</div>
+          </div>
+          ${rowsHtml}
+          <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
+          <div class="mt-3 flex items-center justify-between">
+            <button class="text-sm underline" data-shots-toggle="${m.id}">Visa skottkarta</button>
+          </div>
+          <div id="shots-wrap-${m.id}" class="hidden mt-2">
+            <div class="flex items-center gap-2 mb-2">
+              <label class="text-xs">Målvakt:</label>
+              <select id="shots-filter-${m.id}" class="border rounded px-2 py-1 text-sm"></select>
+            </div>
+            <div id="rink-${m.id}" class="w-full h-48 rounded-xl border bg-white"></div>
+            <div id="legend-${m.id}" class="mt-2 text-xs text-gray-600"></div>
+          </div>`;
+        wrap.appendChild(card);
+      }
+
+      // Shots toggle + rendering (once)
+      if (!wrap.__hasShotsHandler__){
         wrap.addEventListener('click', async (e) => {
-            const tgl = e.target.closest('[data-shots-toggle]');
-            if (!tgl) return;
+          const tgl = e.target.closest('[data-shots-toggle]'); if (!tgl) return;
+          e.preventDefault();
+          const matchId = tgl.dataset.shotsToggle;
+          const panel   = document.getElementById(`shots-wrap-${matchId}`);
+          const rinkEl  = document.getElementById(`rink-${matchId}`);
+          const selEl   = document.getElementById(`shots-filter-${matchId}`);
+          const legendEl= document.getElementById(`legend-${matchId}`);
+          panel.classList.toggle('hidden');
 
-            e.preventDefault();
-            const matchId = tgl.dataset.shotsToggle;
-            const panel   = document.getElementById(`shots-wrap-${matchId}`);
-            const rinkEl  = document.getElementById(`rink-${matchId}`);
-            const selEl   = document.getElementById(`shots-filter-${matchId}`);
-            const legendEl= document.getElementById(`legend-${matchId}`);
-
-            panel.classList.toggle('hidden');
-
-            // ladda shots en gång och cacha
-            window.__shots_cache = window.__shots_cache || new Map();
-            let shots = __shots_cache.get(matchId);
-            if (!shots){
-            try {
-                shots = await dbLoadShotsForMatch(matchId);
-                __shots_cache.set(matchId, shots);
-            } catch (err) {
-                showError('load-shots-match', err);
-                return;
-            }
-            }
-
-            // bygg filter-lista (Alla + de målvakter som finns i matchens skott)
-            const gids = [...new Set(shots.map(s => s.goalie_id))];
-            const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
-            selEl.innerHTML = `<option value="ALL">Alla målvakter</option>` +
+          window.__shots_cache = window.__shots_cache || new Map();
+          let shots = __shots_cache.get(matchId);
+          if (!shots){
+            try { shots = await dbLoadShotsForMatch(matchId); __shots_cache.set(matchId, shots); }
+            catch (err) { showError('load-shots-match', err); return; }
+          }
+          const gids = [...new Set(shots.map(s => s.goalie_id))];
+          const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+          selEl.innerHTML = `<option value="ALL">Alla målvakter</option>` +
             gids.map(gid => {
-                const g = goalieById.get(gid);
-                const label = g ? `${g.name} (${g.code})` : 'Okänd målvakt';
-                return `<option value="${gid}">${label}</option>`;
+              const g = goalieById.get(gid);
+              const label = g ? `${g.name} (${g.code})` : 'Okänd målvakt';
+              return `<option value="${gid}">${label}</option>`;
             }).join('');
-
-            const draw = () => {
+          const draw = () => {
             const filter = selEl.value || 'ALL';
             renderShotMap(rinkEl, shots, goalieById, filter);
             renderShotLegend(legendEl, shots, filter);
-            };
-
-            draw();
-            if (!selEl.__hasHandler){
-            selEl.addEventListener('change', draw);
-            selEl.__hasHandler = true;
-            }
+          };
+          draw();
+          if (!selEl.__hasHandler){ selEl.addEventListener('change', draw); selEl.__hasHandler = true; }
         });
         wrap.__hasShotsHandler__ = true;
+      }
+
+      // Delete (once)
+      if (!wrap.__hasDeleteHandler__){
+        wrap.addEventListener('click', async (e) => {
+          const a = e.target.closest('[data-del]'); if (!a) return;
+          e.preventDefault();
+          const matchId = a.dataset.del; if (!matchId) return;
+          if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
+          try { await dbDeleteMatch(matchId); await refreshAll(); }
+          catch (err) { showError('delete-match', err); }
+        });
+        wrap.__hasDeleteHandler__ = true;
+      }
     }
 
-
-        // delete-hanterare (om du inte redan kopplat den en gång tidigare)
-        if (!wrap.__hasDeleteHandler__) {
-            wrap.addEventListener('click', async (e) => {
-            const a = e.target.closest('[data-del]');
-            if (!a) return;
-            e.preventDefault();
-            const matchId = a.dataset.del;
-            if (!matchId) return;
-            if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
-            try { await dbDeleteMatch(matchId); await refreshAll(); }
-            catch (err) { showError('delete-match', err); }
-            });
-            wrap.__hasDeleteHandler__ = true;
-        }
-    }
-
-
-
-
-
+    // ===== Cards & summeringar =====
     function renderCards(matches){
-      const wrap = $('#cards'); 
-      wrap.innerHTML='';
+      const wrap = $('#cards'); wrap.innerHTML='';
       GOALIES.forEach(g => {
         const all = matches.flatMap(m => m.entries.filter(e => e.code === g.code));
         const minutes = sum(all.map(e => e.minutes));
@@ -1576,163 +1138,47 @@ async function dbInsertShots(matchId){
           </div>
           <div class="mt-3 flex justify-end">
             <a href="goalie.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}&code=${encodeURIComponent(g.code)}"
-              class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">
-              Detaljer
-            </a>
-          </div>
-        `;
+              class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">Detaljer</a>
+          </div>`;
         wrap.appendChild(card);
       });
     }
-
     function renderResultSummary(matches){
       const v = matches.filter(m => m.result === 'V').length;
       const o = matches.filter(m => m.result === 'O').length;
       const f = matches.filter(m => m.result === 'F').length;
-      $('#stat-v').textContent = v;
-      $('#stat-o').textContent = o;
-      $('#stat-f').textContent = f;
-      const minutesTotal = GOALIES
-        .map(g => matches.flatMap(m => m.entries.filter(e => e.code===g.code)).reduce((a,e)=>a+e.minutes,0))
-        .reduce((a,b)=>a+b,0);
+      $('#stat-v').textContent = v; $('#stat-o').textContent = o; $('#stat-f').textContent = f;
+      const minutesTotal = GOALIES.map(g => matches.flatMap(m => m.entries.filter(e => e.code===g.code)).reduce((a,e)=>a+e.minutes,0)).reduce((a,b)=>a+b,0);
       $('#stat-min').textContent = minutesTotal;
     }
 
-    function renderMatchList(matches, arg2){
-        const isMap = v => v && typeof v === 'object' && v.constructor === Map;
+    // ===== REFRESH ALL =====
+    async function refreshAll(){
+      try {
+        await dbEnsureDefaultGoalies();
+        GOALIES = await dbLoadGoalies();
+        renderGoalieInputs();
 
-        // Stötta både “Map direkt” och objekt med båda mapparna
-        let shotStatsByMatch = new Map();
-        let manualStatsByMatch = new Map();
+        const matches = await dbListMatches();
+        const [shotStatsByMatch, manualStatsByMatch] = await Promise.all([
+          dbGroupShotStatsByMatch(matches),
+          dbLoadManualStatsByMatch(matches)
+        ]);
 
-        if (isMap(arg2)) {
-            shotStatsByMatch = arg2; // bakåtkompat: gamla anrop
-        } else if (arg2 && typeof arg2 === 'object') {
-            if (isMap(arg2.shotStatsByMatch))   shotStatsByMatch = arg2.shotStatsByMatch;
-            if (isMap(arg2.manualStatsByMatch)) manualStatsByMatch = arg2.manualStatsByMatch;
+        renderCards(matches);
+        renderResultSummary(matches);
+        renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch });
+        window.__LATEST_MATCHES__ = matches;
+        updateChartSelect();
+        renderSavePctChart(matches);
+
+        const btnCompare = document.getElementById('btn-compare');
+        if (btnCompare && CURRENT_TEAM_ID) {
+          btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
+          btnCompare.target = '_self';
         }
-
-        const wrap = document.getElementById('match-list');
-        wrap.innerHTML = '';
-
-        const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
-
-        for (const m of matches){
-            const card = document.createElement('div');
-            card.className = 'rounded-2xl border p-4 mb-4';
-
-            const hdr = `
-            <div class="flex items-center justify-between mb-2">
-                <div>
-                <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
-                <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
-                </div>
-                <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
-            </div>
-            `;
-
-            const sMap = shotStatsByMatch.get(m.id)  || new Map(); // events
-            const gMap = manualStatsByMatch.get(m.id) || new Map(); // manuella
-
-            const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
-            let rowsHtml = '';
-
-            if (unionIds.size){
-            for (const gid of unionIds){
-                const g  = goalieById.get(gid) || {};
-                const ev = sMap.get(gid) || null;
-                const ms = gMap.get(gid) || null;
-
-                const minutes = ms?.minutes ?? '–';
-
-                let saves, goals, sog;
-                if (ev){
-                saves = ev.save || 0;
-                goals = ev.goal || 0;
-                sog   = ev.sog  || (saves + goals);
-                } else {
-                const mSaves = ms?.saves | 0;
-                const mShots = ms?.shots | 0;
-                saves = mSaves;
-                goals = Math.max(0, mShots - mSaves);
-                sog   = Math.max(0, mShots);
-                }
-
-                const name = g.name || 'Okänd målvakt';
-                const code = g.code || '';
-
-                rowsHtml += `
-                <div class="grid grid-cols-12 text-sm py-1">
-                    <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                    <div class="col-span-2 text-center">${minutes}</div>
-                    <div class="col-span-2 text-center">${saves}</div>
-                    <div class="col-span-2 text-center font-medium">
-                    ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
-                    </div>
-                </div>
-                `;
-            }
-            } else {
-            rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
-            }
-
-            card.innerHTML = hdr + `
-            <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
-                <div class="col-span-6">Målvakt</div>
-                <div class="col-span-2 text-center">Min</div>
-                <div class="col-span-2 text-center">Räddn</div>
-                <div class="col-span-2 text-center">Skott</div>
-            </div>
-            ${rowsHtml}
-            <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
-
-            <div class="mt-3 flex items-center justify-between">
-                <button class="text-sm underline" data-shots-toggle="${m.id}">Visa skottkarta</button>
-            </div>
-            <div id="shots-wrap-${m.id}" class="hidden mt-2">
-                <div class="flex items-center gap-2 mb-2">
-                <label class="text-xs">Målvakt:</label>
-                <select id="shots-filter-${m.id}" class="border rounded px-2 py-1 text-sm"></select>
-                </div>
-                <div id="rink-${m.id}" class="w-full h-48 rounded-xl border bg-white"></div>
-                <div id="legend-${m.id}" class="mt-2 text-xs text-gray-600"></div>
-            </div>
-            `;
-
-            
-
-            wrap.appendChild(card);
-        }
-
-        // (behåll din delete-event delegation här om du redan lagt in den)
-        }
-
-
-        wrap.appendChild(card);
-        // koppla klick bara en gång
-            if (!wrap.__hasDeleteHandler__) {
-                wrap.addEventListener('click', async (e) => {
-                    const a = e.target.closest('[data-del]');
-                if (!a) return;
-
-                     e.preventDefault();
-                    const matchId = a.dataset.del;
-                if (!matchId) return;
-
-                    if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
-
-                    try {
-                    await dbDeleteMatch(matchId);
-                    await refreshAll();
-                    } catch (err) {
-                    showError('delete-match', err);
-                    }
-                });
-                wrap.__hasDeleteHandler__ = true;
-        }
-
-
-
+      } catch (e){ showError('refresh-all', e); }
+    }
   </script>
 </body>
 </html>
