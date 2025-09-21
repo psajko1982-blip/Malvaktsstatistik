@@ -308,6 +308,18 @@ function clearShotsForCurrent(){
 
 // ===== Spara skott till DB efter att matchen skapats =====
 
+async function dbLoadShotsForMatch(matchId){
+  const { data, error } = await sb
+    .from('shots')
+    .select('id, goalie_id, x, y, result')
+    .eq('team_id', CURRENT_TEAM_ID)
+    .eq('match_id', matchId);
+
+  if (error) throw error;
+  return data || [];
+}
+
+
 // Shots-events per match & målvakt: { save, goal, miss, block, sog, total }
 async function dbGroupShotStatsByMatch(matches){
   if (!matches?.length) return new Map();
@@ -1261,28 +1273,106 @@ async function dbInsertShots(matchId){
       }
     });
 
+    function renderShotMap(containerEl, shots, goalieById, goalieFilter='ALL'){
+        containerEl.innerHTML = '';
 
-    async function refreshAll(){
-        try {
-            await dbEnsureDefaultGoalies();
-            GOALIES = await dbLoadGoalies();
-            renderGoalieInputs();
+        const W = containerEl.clientWidth || 360;
+        const H = Math.round(W * 0.6);
+        const pad = 8;
 
-            const matches = await dbListMatches();
-            const [shotStatsByMatch, manualStatsByMatch] = await Promise.all([
-            dbGroupShotStatsByMatch(matches),
-            dbLoadManualStatsByMatch(matches)
-            ]);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', H);
 
-            renderCards(matches);
-            renderResultSummary(matches);
-            renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch }); // <— skicka objektet
+        // Rink (enkel)
+        const bg = document.createElementNS(svg.namespaceURI, 'rect');
+        bg.setAttribute('x', 0); bg.setAttribute('y', 0);
+        bg.setAttribute('width', W); bg.setAttribute('height', H);
+        bg.setAttribute('fill', 'white'); bg.setAttribute('rx', 18); bg.setAttribute('ry', 18);
+        bg.setAttribute('stroke', '#d1d5db'); // gray-300
+        svg.appendChild(bg);
 
-            window.__LATEST_MATCHES__ = matches;
-            updateChartSelect();
-            renderSavePctChart(matches);
-        } catch (e){ showError('refresh-all', e); }
+        // Center line
+        const cl = document.createElementNS(svg.namespaceURI, 'line');
+        cl.setAttribute('x1', W/2); cl.setAttribute('x2', W/2);
+        cl.setAttribute('y1', 0); cl.setAttribute('y2', H);
+        cl.setAttribute('stroke', '#ef4444'); cl.setAttribute('stroke-width', '2');
+        svg.appendChild(cl);
+
+        // Målområdes-linjer (approx)
+        const l1 = document.createElementNS(svg.namespaceURI, 'line');
+        l1.setAttribute('x1', pad*2); l1.setAttribute('x2', pad*2);
+        l1.setAttribute('y1', pad); l1.setAttribute('y2', H-pad);
+        l1.setAttribute('stroke', '#60a5fa'); l1.setAttribute('stroke-width', '2');
+        svg.appendChild(l1);
+
+        const l2 = document.createElementNS(svg.namespaceURI, 'line');
+        l2.setAttribute('x1', W - pad*2); l2.setAttribute('x2', W - pad*2);
+        l2.setAttribute('y1', pad); l2.setAttribute('y2', H - pad);
+        l2.setAttribute('stroke', '#60a5fa'); l2.setAttribute('stroke-width', '2');
+        svg.appendChild(l2);
+
+        // Rita markörer
+        const drawX = (x, y, size, color) => {
+            const g = document.createElementNS(svg.namespaceURI, 'g');
+            const lA = document.createElementNS(svg.namespaceURI, 'line');
+            const lB = document.createElementNS(svg.namespaceURI, 'line');
+            lA.setAttribute('x1', x-size); lA.setAttribute('y1', y-size);
+            lA.setAttribute('x2', x+size); lA.setAttribute('y2', y+size);
+            lB.setAttribute('x1', x-size); lB.setAttribute('y1', y+size);
+            lB.setAttribute('x2', x+size); lB.setAttribute('y2', y-size);
+            [lA,lB].forEach(l => { l.setAttribute('stroke', color); l.setAttribute('stroke-width','2'); l.setAttribute('stroke-linecap','round'); });
+            g.appendChild(lA); g.appendChild(lB); svg.appendChild(g);
+        };
+
+        const drawCircle = (x, y, r, color, fill=false) => {
+            const c = document.createElementNS(svg.namespaceURI, 'circle');
+            c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
+            c.setAttribute('stroke', color); c.setAttribute('stroke-width', '2');
+            c.setAttribute('fill', fill ? color : 'none');
+            c.setAttribute('fill-opacity', fill ? '0.15' : '0');
+            svg.appendChild(c);
+        };
+
+        const drawSquare = (x, y, size, color) => {
+            const s = document.createElementNS(svg.namespaceURI, 'rect');
+            s.setAttribute('x', x-size); s.setAttribute('y', y-size);
+            s.setAttribute('width', size*2); s.setAttribute('height', size*2);
+            s.setAttribute('stroke', color); s.setAttribute('stroke-width','2');
+            s.setAttribute('fill','none'); svg.appendChild(s);
+        };
+
+        const filtered = shots.filter(s => goalieFilter === 'ALL' || s.goalie_id === goalieFilter);
+
+        for (const s of filtered){
+            const x = pad + (W - pad*2) * (Number(s.x) || 0);
+            const y = pad + (H - pad*2) * (Number(s.y) || 0);
+
+            switch ((s.result || '').toLowerCase()){
+            case 'goal': drawX(x, y, 6, '#ef4444'); break;          // mål = rött X
+            case 'save': drawCircle(x, y, 5, '#10b981', true); break; // räddning = grön fylld cirkel
+            case 'block': drawSquare(x, y, 5, '#3b82f6'); break;     // block = blå fyrkant
+            case 'miss':
+            default: drawCircle(x, y, 5, '#6b7280', false); break;   // miss = grå ring
+            }
+        }
+
+        containerEl.appendChild(svg);
     }
+
+    function renderShotLegend(legendEl, shots, goalieFilter='ALL'){
+        const counts = { save:0, goal:0, miss:0, block:0 };
+        for (const s of shots){
+            if (goalieFilter !== 'ALL' && s.goalie_id !== goalieFilter) continue;
+            const k = (s.result || '').toLowerCase();
+            if (k in counts) counts[k] += 1;
+        }
+        legendEl.innerHTML =
+            `Räddn: ${counts.save} • Mål: ${counts.goal} • Miss: ${counts.miss} • Block: ${counts.block}`;
+    }
+
+
 
     function renderMatchList(matches, maps = {}){
         const { shotStatsByMatch = new Map(), manualStatsByMatch = new Map() } = maps;
@@ -1308,33 +1398,38 @@ async function dbInsertShots(matchId){
             const sMap = shotStatsByMatch.get(m.id)  || new Map(); // events
             const gMap = manualStatsByMatch.get(m.id) || new Map(); // manuellt
 
-            // union av alla målvakts-id som finns i antingen events eller manuellt
             const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
-
             let rowsHtml = '';
+
+            // totals
+            let totMin = 0, totSaves = 0, totGoals = 0;
+
             if (unionIds.size){
             for (const gid of unionIds){
                 const g  = goalieById.get(gid) || {};
                 const ev = sMap.get(gid) || null;
                 const ms = gMap.get(gid) || null;
 
-                const minutes = ms?.minutes ?? '–';
+                const minutes = Number(ms?.minutes ?? 0);
+                const mSaves  = Number(ms?.saves ?? 0);
+                const mShots  = Number(ms?.shots ?? 0);
 
-                // välj Källa för Räddn/Skott:
-                // 1) Finns events? använd dem
-                // 2) annars manuella stats (shots/saves)
+                // välj källa för räddn/skott
                 let saves, goals, sog;
                 if (ev){
-                saves = ev.save || 0;
-                goals = ev.goal || 0;
-                sog   = ev.sog  || (saves + goals);
+                saves = Number(ev.save || 0);
+                goals = Number(ev.goal || 0);
+                sog   = Number(ev.sog  || (saves + goals));
                 } else {
-                const mSaves = ms?.saves | 0;
-                const mShots = ms?.shots | 0;
                 saves = mSaves;
                 goals = Math.max(0, mShots - mSaves);
                 sog   = Math.max(0, mShots);
                 }
+
+                // summera totals
+                totMin   += minutes;
+                totSaves += saves;
+                totGoals += goals;
 
                 const name = g.name || 'Okänd målvakt';
                 const code = g.code || '';
@@ -1342,7 +1437,7 @@ async function dbInsertShots(matchId){
                 rowsHtml += `
                 <div class="grid grid-cols-12 text-sm py-1">
                     <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                    <div class="col-span-2 text-center">${minutes}</div>
+                    <div class="col-span-2 text-center">${minutes || '–'}</div>
                     <div class="col-span-2 text-center">${saves}</div>
                     <div class="col-span-2 text-center font-medium">
                     ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
@@ -1350,6 +1445,17 @@ async function dbInsertShots(matchId){
                 </div>
                 `;
             }
+
+            // summa-rad
+            const totSOG = totSaves + totGoals;
+            rowsHtml += `
+                <div class="grid grid-cols-12 text-sm py-1 border-t mt-1 pt-1 font-medium">
+                <div class="col-span-6 text-right">Summa</div>
+                <div class="col-span-2 text-center">${totMin || '–'}</div>
+                <div class="col-span-2 text-center">${totSaves}</div>
+                <div class="col-span-2 text-center">${totSOG}${totGoals ? `<span class="ml-1 text-xs text-red-600">(${totGoals} mål)</span>` : ''}</div>
+                </div>
+            `;
             } else {
             rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
             }
@@ -1367,8 +1473,62 @@ async function dbInsertShots(matchId){
 
             wrap.appendChild(card);
         }
+        
+        // shots toggle + rendering
+        if (!wrap.__hasShotsHandler__) {
+        wrap.addEventListener('click', async (e) => {
+            const tgl = e.target.closest('[data-shots-toggle]');
+            if (!tgl) return;
 
-        // — event delegation för Ta bort (om du inte redan har)
+            e.preventDefault();
+            const matchId = tgl.dataset.shotsToggle;
+            const panel   = document.getElementById(`shots-wrap-${matchId}`);
+            const rinkEl  = document.getElementById(`rink-${matchId}`);
+            const selEl   = document.getElementById(`shots-filter-${matchId}`);
+            const legendEl= document.getElementById(`legend-${matchId}`);
+
+            panel.classList.toggle('hidden');
+
+            // ladda shots en gång och cacha
+            window.__shots_cache = window.__shots_cache || new Map();
+            let shots = __shots_cache.get(matchId);
+            if (!shots){
+            try {
+                shots = await dbLoadShotsForMatch(matchId);
+                __shots_cache.set(matchId, shots);
+            } catch (err) {
+                showError('load-shots-match', err);
+                return;
+            }
+            }
+
+            // bygg filter-lista (Alla + de målvakter som finns i matchens skott)
+            const gids = [...new Set(shots.map(s => s.goalie_id))];
+            const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+            selEl.innerHTML = `<option value="ALL">Alla målvakter</option>` +
+            gids.map(gid => {
+                const g = goalieById.get(gid);
+                const label = g ? `${g.name} (${g.code})` : 'Okänd målvakt';
+                return `<option value="${gid}">${label}</option>`;
+            }).join('');
+
+            const draw = () => {
+            const filter = selEl.value || 'ALL';
+            renderShotMap(rinkEl, shots, goalieById, filter);
+            renderShotLegend(legendEl, shots, filter);
+            };
+
+            draw();
+            if (!selEl.__hasHandler){
+            selEl.addEventListener('change', draw);
+            selEl.__hasHandler = true;
+            }
+        });
+        wrap.__hasShotsHandler__ = true;
+    }
+
+
+        // delete-hanterare (om du inte redan kopplat den en gång tidigare)
         if (!wrap.__hasDeleteHandler__) {
             wrap.addEventListener('click', async (e) => {
             const a = e.target.closest('[data-del]');
@@ -1383,6 +1543,7 @@ async function dbInsertShots(matchId){
             wrap.__hasDeleteHandler__ = true;
         }
     }
+
 
 
 
@@ -1524,7 +1685,21 @@ async function dbInsertShots(matchId){
             </div>
             ${rowsHtml}
             <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
+
+            <div class="mt-3 flex items-center justify-between">
+                <button class="text-sm underline" data-shots-toggle="${m.id}">Visa skottkarta</button>
+            </div>
+            <div id="shots-wrap-${m.id}" class="hidden mt-2">
+                <div class="flex items-center gap-2 mb-2">
+                <label class="text-xs">Målvakt:</label>
+                <select id="shots-filter-${m.id}" class="border rounded px-2 py-1 text-sm"></select>
+                </div>
+                <div id="rink-${m.id}" class="w-full h-48 rounded-xl border bg-white"></div>
+                <div id="legend-${m.id}" class="mt-2 text-xs text-gray-600"></div>
+            </div>
             `;
+
+            
 
             wrap.appendChild(card);
         }
@@ -1535,26 +1710,26 @@ async function dbInsertShots(matchId){
 
         wrap.appendChild(card);
         // koppla klick bara en gång
-        if (!wrap.__hasDeleteHandler__) {
-        wrap.addEventListener('click', async (e) => {
-            const a = e.target.closest('[data-del]');
-            if (!a) return;
+            if (!wrap.__hasDeleteHandler__) {
+                wrap.addEventListener('click', async (e) => {
+                    const a = e.target.closest('[data-del]');
+                if (!a) return;
 
-            e.preventDefault();
-            const matchId = a.dataset.del;
-            if (!matchId) return;
+                     e.preventDefault();
+                    const matchId = a.dataset.del;
+                if (!matchId) return;
 
-            if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
+                    if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
 
-            try {
-            await dbDeleteMatch(matchId);
-            await refreshAll();
-            } catch (err) {
-            showError('delete-match', err);
-            }
-        });
-        wrap.__hasDeleteHandler__ = true;
-    }
+                    try {
+                    await dbDeleteMatch(matchId);
+                    await refreshAll();
+                    } catch (err) {
+                    showError('delete-match', err);
+                    }
+                });
+                wrap.__hasDeleteHandler__ = true;
+        }
 
 
 
