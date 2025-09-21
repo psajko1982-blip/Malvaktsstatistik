@@ -1269,7 +1269,6 @@ async function dbInsertShots(matchId){
             renderGoalieInputs();
 
             const matches = await dbListMatches();
-
             const [shotStatsByMatch, manualStatsByMatch] = await Promise.all([
             dbGroupShotStatsByMatch(matches),
             dbLoadManualStatsByMatch(matches)
@@ -1277,17 +1276,11 @@ async function dbInsertShots(matchId){
 
             renderCards(matches);
             renderResultSummary(matches);
-            renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch }); // <—
+            renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch }); // <— skicka objektet
 
             window.__LATEST_MATCHES__ = matches;
             updateChartSelect();
             renderSavePctChart(matches);
-
-            const btnCompare = document.getElementById('btn-compare');
-            if (btnCompare && CURRENT_TEAM_ID) {
-            btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
-            btnCompare.target = '_self';
-            }
         } catch (e){ showError('refresh-all', e); }
     }
 
@@ -1444,64 +1437,101 @@ async function dbInsertShots(matchId){
       $('#stat-min').textContent = minutesTotal;
     }
 
-    function renderMatchList(matches, shotStatsByMatch){
-      const wrap = document.getElementById('match-list');
-      wrap.innerHTML = '';
+    function renderMatchList(matches, arg2){
+        const isMap = v => v && typeof v === 'object' && v.constructor === Map;
 
-      // snabb lookup
-      const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+        // Stötta både “Map direkt” och objekt med båda mapparna
+        let shotStatsByMatch = new Map();
+        let manualStatsByMatch = new Map();
 
-      for (const m of matches){
-        const card = document.createElement('div');
-        card.className = 'rounded-2xl border p-4 mb-4';
-
-        const hdr = `
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
-              <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
-            </div>
-            <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
-          </div>
-        `;
-
-        const statsMap = shotStatsByMatch?.get(m.id) || new Map();
-
-        let rowsHtml = '';
-        if (statsMap.size){
-          for (const [gid, s] of statsMap.entries()){
-            const g = goalieById.get(gid) || {};
-            const name = g.name || 'Okänd målvakt';
-            const code = g.code || '';
-            const saves = s.save ?? 0;
-            const goals = s.goal ?? 0;
-            const sog   = s.sog  ?? (saves + goals);
-
-            rowsHtml += `
-              <div class="grid grid-cols-12 text-sm py-1">
-                <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                <div class="col-span-2 text-center">–</div>
-                <div class="col-span-2 text-center">${saves}</div>
-                <div class="col-span-2 text-center font-medium">
-                  ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
-                </div>
-              </div>
-            `;
-          }
-        } else {
-          rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
+        if (isMap(arg2)) {
+            shotStatsByMatch = arg2; // bakåtkompat: gamla anrop
+        } else if (arg2 && typeof arg2 === 'object') {
+            if (isMap(arg2.shotStatsByMatch))   shotStatsByMatch = arg2.shotStatsByMatch;
+            if (isMap(arg2.manualStatsByMatch)) manualStatsByMatch = arg2.manualStatsByMatch;
         }
 
-        card.innerHTML = hdr + `
-          <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
-            <div class="col-span-6">Målvakt</div>
-            <div class="col-span-2 text-center">Min</div>
-            <div class="col-span-2 text-center">Räddn</div>
-            <div class="col-span-2 text-center">Skott</div>
-          </div>
-          ${rowsHtml}
-          <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
-        `;
+        const wrap = document.getElementById('match-list');
+        wrap.innerHTML = '';
+
+        const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+
+        for (const m of matches){
+            const card = document.createElement('div');
+            card.className = 'rounded-2xl border p-4 mb-4';
+
+            const hdr = `
+            <div class="flex items-center justify-between mb-2">
+                <div>
+                <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
+                <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
+                </div>
+                <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+            </div>
+            `;
+
+            const sMap = shotStatsByMatch.get(m.id)  || new Map(); // events
+            const gMap = manualStatsByMatch.get(m.id) || new Map(); // manuella
+
+            const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
+            let rowsHtml = '';
+
+            if (unionIds.size){
+            for (const gid of unionIds){
+                const g  = goalieById.get(gid) || {};
+                const ev = sMap.get(gid) || null;
+                const ms = gMap.get(gid) || null;
+
+                const minutes = ms?.minutes ?? '–';
+
+                let saves, goals, sog;
+                if (ev){
+                saves = ev.save || 0;
+                goals = ev.goal || 0;
+                sog   = ev.sog  || (saves + goals);
+                } else {
+                const mSaves = ms?.saves | 0;
+                const mShots = ms?.shots | 0;
+                saves = mSaves;
+                goals = Math.max(0, mShots - mSaves);
+                sog   = Math.max(0, mShots);
+                }
+
+                const name = g.name || 'Okänd målvakt';
+                const code = g.code || '';
+
+                rowsHtml += `
+                <div class="grid grid-cols-12 text-sm py-1">
+                    <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
+                    <div class="col-span-2 text-center">${minutes}</div>
+                    <div class="col-span-2 text-center">${saves}</div>
+                    <div class="col-span-2 text-center font-medium">
+                    ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
+                    </div>
+                </div>
+                `;
+            }
+            } else {
+            rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
+            }
+
+            card.innerHTML = hdr + `
+            <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
+                <div class="col-span-6">Målvakt</div>
+                <div class="col-span-2 text-center">Min</div>
+                <div class="col-span-2 text-center">Räddn</div>
+                <div class="col-span-2 text-center">Skott</div>
+            </div>
+            ${rowsHtml}
+            <div class="mt-2 text-[11px] text-gray-500">“Skott” = räddningar + mål. Miss/block visas inte här.</div>
+            `;
+
+            wrap.appendChild(card);
+        }
+
+        // (behåll din delete-event delegation här om du redan lagt in den)
+        }
+
 
         wrap.appendChild(card);
         // koppla klick bara en gång
@@ -1524,9 +1554,6 @@ async function dbInsertShots(matchId){
             }
         });
         wrap.__hasDeleteHandler__ = true;
-        }
-
-      }
     }
 
 
