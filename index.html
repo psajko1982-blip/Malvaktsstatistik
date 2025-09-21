@@ -497,13 +497,21 @@ async function dbInsertShots(matchId){
       } catch (e) { showError('signup', e); }
     });
 
+   // rätt
     $('#btn-signin').addEventListener('click', async () => {
-      $('#auth-msg').textContent = '';
-      try {
-        const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+    $('#auth-msg').textContent = '';
+    try {
+        const { data, error } = await sb.auth.signInWithPassword({
+        email: $('#email').value.trim(),
+        password: $('#password').value
+        });
         if (error) throw error;
-      } catch (e) { showError('signin', e); }
+        await boot(); // uppdatera UI direkt efter lyckad inloggning
+    } catch (e) {
+        showError('signin', e);
+    }
     });
+
 
     btnSignOut.addEventListener('click', async () => { await sb.auth.signOut(); });
 
