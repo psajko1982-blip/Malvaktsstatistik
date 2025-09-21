@@ -31,10 +31,10 @@
         </div>
         <div class="sm:col-span-2">
           <div class="text-xs text-gray-500 mb-1">Välj målvakter (2–4)</div>
-          <select id="sel-goalies" class="w-full rounded-xl border p-2 text-sm" multiple size="4"></select>
+          <select id="sel-goalies" class="w-full rounded-xl border p-2 text-sm" multiple size="6"></select>
           <div class="mt-2 flex gap-2">
             <button id="btn-compare" class="rounded-xl border px-3 py-1 text-sm">Jämför</button>
-            <button id="btn-export" class="rounded-xl border px-3 py-1 text-sm">Exportera CSV</button>
+            <button id="btn-export" class="rounded-xl border px-3 py-1 text-sm" disabled>Exportera CSV</button>
           </div>
         </div>
       </div>
@@ -48,10 +48,12 @@
       <div class="rounded-2xl border shadow-sm p-3 bg-white">
         <div class="text-sm text-gray-500">Rädd% över tid (overlay)</div>
         <div class="mt-3 h-56"><canvas id="svpctChart"></canvas></div>
+        <div id="empty-svpct" class="text-center text-sm text-gray-500 mt-2 hidden">Ingen data att visa.</div>
       </div>
       <div class="rounded-2xl border shadow-sm p-3 bg-white">
         <div class="text-sm text-gray-500">Skott & Räddningar per match (summa per datum)</div>
         <div class="mt-3 h-56"><canvas id="srChart"></canvas></div>
+        <div id="empty-sr" class="text-center text-sm text-gray-500 mt-2 hidden">Ingen data att visa.</div>
       </div>
     </div>
 
@@ -59,22 +61,22 @@
   </div>
 
 <script>
-/* ===== URL & Supabase (BYT TILL DINA VÄRDEN) ===== */
+/* ===== URL & Supabase (samma som index.html) ===== */
 const qs = new URLSearchParams(location.search);
-const TEAM_ID = qs.get('team') || '';    // ex: compare.html?team=<TEAM_ID>
-const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- BYT
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";               // <-- BYT
+const TEAM_ID = qs.get('team') || '';    // compare.html?team=<TEAM_ID>
+const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth:{ persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storage:window.localStorage }
 });
-window.sb = sb; window.TEAM_ID = TEAM_ID;
 
 /* ===== Helpers ===== */
 const $ = s => document.querySelector(s);
-const escCSV = v => { const s=String(v??''); return /[;"\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s; };
-function download(filename, content, mime){ const blob=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url); }
 const pct = (saves, shots)=> shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
 const pctNum = (saves, shots)=> shots>0 ? +(((saves/shots)*100).toFixed(2)) : null;
+const escCSV = v => { const s=String(v??''); return /[;"\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s; };
+function download(filename, content, mime){ const b=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; a.click(); URL.revokeObjectURL(u); }
+const palette = i => ['rgba(33,150,243,1)','rgba(76,175,80,1)','rgba(255,152,0,1)','rgba(244,67,54,1)'][i%4];
 
 /* ===== Session ===== */
 async function ensureSession(timeoutMs=4000){
@@ -86,10 +88,8 @@ async function ensureSession(timeoutMs=4000){
   });
 }
 
-/* ===== UI init ===== */
+/* ===== Laddning av målvakter ===== */
 let ALL_GOALIES = [];
-let svpctChart=null, srChart=null;
-
 async function loadGoalies(){
   const r = await sb.from('goalies').select('id,code,name').eq('team_id', TEAM_ID).order('code');
   if(r.error) throw r.error;
@@ -101,6 +101,45 @@ async function loadGoalies(){
     sel.appendChild(opt);
   });
 }
+
+/* ===== Hämta data för valda ===== */
+async function fetchDataFor(goalieIds){
+  const st = await sb.from('match_goalie_stats')
+    .select('match_id, goalie_id, minutes, saves, shots')
+    .eq('team_id', TEAM_ID)
+    .in('goalie_id', goalieIds);
+  if(st.error) throw st.error;
+
+  const matchIds=[...new Set(st.data.map(x=>x.match_id))];
+  if(!matchIds.length) return { perGoalie:{}, dates:[] };
+
+  const m = await sb.from('matches').select('id,date,opponent').in('id', matchIds).order('date',{ascending:true});
+  if(m.error) throw m.error;
+
+  const matchesById = Object.fromEntries(m.data.map(mm=>[mm.id, mm]));
+  const dates = [...new Set(m.data.map(mm=>mm.date))].sort();
+
+  const goalieById = Object.fromEntries(ALL_GOALIES.map(g=>[g.id, g]));
+  const perGoalie = {};
+  goalieIds.forEach(id => {
+    const g = goalieById[id];
+    perGoalie[id] = { id, code:g.code, name:g.name, series:[] };
+  });
+
+  st.data.forEach(row=>{
+    const mm = matchesById[row.match_id]; if(!mm) return;
+    perGoalie[row.goalie_id].series.push({ date:mm.date, opponent:mm.opponent, minutes:row.minutes, saves:row.saves, shots:row.shots });
+  });
+
+  for(const id of goalieIds){
+    perGoalie[id].series.sort((a,b)=>a.date.localeCompare(b.date));
+  }
+
+  return { perGoalie, dates };
+}
+
+/* ===== Rendering ===== */
+let svpctChart=null, srChart=null;
 
 function renderTotals(cards){
   const wrap = $('#totals'); wrap.innerHTML='';
@@ -127,125 +166,64 @@ function renderTotals(cards){
   });
 }
 
-function palette(i){
-  // generera några olika färger utan att specificera Chart.js tema
-  const base = [
-    'rgba(33,150,243,1)','rgba(76,175,80,1)','rgba(255,152,0,1)','rgba(244,67,54,1)'
-  ];
-  return base[i % base.length];
-}
-
-/* ===== Hämta data för utvalda målvakter ===== */
-async function fetchDataFor(goalieIds){
-  // hämta stats
-  const st = await sb.from('match_goalie_stats')
-    .select('match_id, goalie_id, minutes, saves, shots')
-    .eq('team_id', TEAM_ID)
-    .in('goalie_id', goalieIds);
-  if(st.error) throw st.error;
-
-  const matchIds=[...new Set(st.data.map(x=>x.match_id))];
-  if(!matchIds.length) return { rows:[], perGoalie:{}, dates:[] };
-
-  // hämta matcher (datum/opponent)
-  const m = await sb.from('matches').select('id,date,opponent').in('id', matchIds).order('date',{ascending:true});
-  if(m.error) throw m.error;
-
-  // indexering
-  const matchesById = Object.fromEntries(m.data.map(mm=>[mm.id, mm]));
-  const dates = [...new Set(m.data.map(mm=>mm.date))].sort();
-
-  // struktur: perMålvakt { code,name, series:[{date,saves,shots,minutes}] }
-  const goalieById = Object.fromEntries(ALL_GOALIES.map(g=>[g.id, g]));
-  const perGoalie = {};
-  goalieIds.forEach(id => {
-    const g = goalieById[id];
-    perGoalie[id] = { id, code:g.code, name:g.name, series:[] };
-  });
-
-  st.data.forEach(row=>{
-    const mm = matchesById[row.match_id]; if(!mm) return;
-    perGoalie[row.goalie_id].series.push({ date:mm.date, opponent:mm.opponent, minutes:row.minutes, saves:row.saves, shots:row.shots });
-  });
-
-  // sortera serier per datum
-  for(const id of goalieIds){
-    perGoalie[id].series.sort((a,b)=>a.date.localeCompare(b.date));
-  }
-
-  return { rows: st.data, perGoalie, dates, matchesById };
-}
-
-/* ===== Grafer ===== */
 function renderCharts(perGoalie, dates){
+  const emptyLine = $('#empty-svpct');
+  const emptyBar  = $('#empty-sr');
+
   // Save% overlay
   const datasets = [];
+  let anyData = false;
   Object.values(perGoalie).forEach((g, i)=>{
     const map = Object.fromEntries(g.series.map(s=>[s.date, pctNum(s.saves, s.shots)]));
     const arr = dates.map(d => map[d] ?? null);
-    datasets.push({
-      label: `${g.name} (${g.code})`,
-      data: arr,
-      spanGaps: true,
-      tension: 0.3,
-      pointRadius: 2,
-      borderColor: palette(i),
+    if (arr.some(v=>v!=null)) anyData = true;
+    datasets.push({ label:`${g.name} (${g.code})`, data:arr, spanGaps:true, tension:0.3, pointRadius:2, borderColor:palette(i) });
+  });
+
+  emptyLine.classList.toggle('hidden', anyData);
+  if (svpctChart) svpctChart.destroy();
+  if (anyData){
+    svpctChart = new Chart($('#svpctChart').getContext('2d'), {
+      type:'line',
+      data:{ labels:dates, datasets },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{ y:{ suggestedMin:60, suggestedMax:100, ticks:{ callback:v=>v+'%' } } },
+        plugins:{ legend:{ position:'bottom' } }
+      }
     });
-  });
+  }
 
-  if(svpctChart) svpctChart.destroy();
-  svpctChart = new Chart($('#svpctChart').getContext('2d'), {
-    type:'line',
-    data:{ labels:dates, datasets },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ suggestedMin:60, suggestedMax:100, ticks:{ callback:v=>v+'%' } } },
-      plugins:{ legend:{ position:'bottom' } }
-    }
-  });
-
-  // Bar chart: summa skott/räddningar per datum (alla valda tillsammans)
+  // Bar chart: summa per datum
   const shotsPerDate = Object.fromEntries(dates.map(d=>[d,0]));
   const savesPerDate = Object.fromEntries(dates.map(d=>[d,0]));
   Object.values(perGoalie).forEach(g=>{
-    g.series.forEach(s=>{
-      shotsPerDate[s.date] += s.shots;
-      savesPerDate[s.date] += s.saves;
-    });
+    g.series.forEach(s=>{ shotsPerDate[s.date]+=s.shots; savesPerDate[s.date]+=s.saves; });
   });
+  const hasBars = dates.some(d => shotsPerDate[d]>0 || savesPerDate[d]>0);
+  emptyBar.classList.toggle('hidden', hasBars);
 
-  if(srChart) srChart.destroy();
-  srChart = new Chart($('#srChart').getContext('2d'), {
-    type:'bar',
-    data:{
-      labels: dates,
-      datasets:[
-        { label:'Skott (summa)', data: dates.map(d=>shotsPerDate[d]) },
-        { label:'Räddningar (summa)', data: dates.map(d=>savesPerDate[d]) },
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ beginAtZero:true } },
-      plugins:{ legend:{ position:'bottom' } }
-    }
-  });
+  if (srChart) srChart.destroy();
+  if (hasBars){
+    srChart = new Chart($('#srChart').getContext('2d'), {
+      type:'bar',
+      data:{ labels: dates, datasets:[ { label:'Skott (summa)', data: dates.map(d=>shotsPerDate[d]) }, { label:'Räddningar (summa)', data: dates.map(d=>savesPerDate[d]) } ] },
+      options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
+    });
+  }
 }
 
 /* ===== Export ===== */
 function exportCSV(perGoalie){
   const head = ['goalie_code','goalie_name','date','opponent','minutes','saves','shots','save_pct'];
   const lines = [head.join(';')];
-
   Object.values(perGoalie).forEach(g=>{
     g.series.forEach(s=>{
       const p = s.shots>0 ? ((s.saves/s.shots)*100).toFixed(2) : '';
       lines.push([g.code, escCSV(g.name), `"${s.date}"`, escCSV(s.opponent||''), s.minutes, s.saves, s.shots, p].join(';'));
     });
   });
-
-  const BOM = '\uFEFF';
-  download('mv_compare.csv', BOM + lines.join('\r\n'), 'text/csv');
+  const BOM = '\uFEFF'; download('mv_compare.csv', BOM + lines.join('\r\n'), 'text/csv');
 }
 
 /* ===== Jämför-knapp ===== */
@@ -261,7 +239,6 @@ async function compareNow(){
   try{
     const { perGoalie, dates } = await fetchDataFor(chosen);
 
-    // totals
     const cards = Object.values(perGoalie).map(g=>{
       const minutes = g.series.reduce((a,s)=>a+s.minutes,0);
       const saves   = g.series.reduce((a,s)=>a+s.saves,0);
@@ -272,8 +249,9 @@ async function compareNow(){
     renderTotals(cards);
     renderCharts(perGoalie, dates);
 
-    // export
-    $('#btn-export').onclick = ()=>exportCSV(perGoalie);
+    const btnExp = $('#btn-export');
+    btnExp.disabled = false;
+    btnExp.onclick = ()=>exportCSV(perGoalie);
 
   }catch(e){
     console.error(e);
@@ -289,7 +267,6 @@ async function compareNow(){
   if(!TEAM_ID){ $('#msg').textContent='Saknar team i URL (?team=...)'; return; }
   await loadGoalies();
 })();
-
 document.getElementById('btn-compare').addEventListener('click', compareNow);
 </script>
 </body>

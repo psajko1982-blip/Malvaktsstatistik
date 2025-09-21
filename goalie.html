@@ -7,9 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-  </style>
+  <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}</style>
 </head>
 <body class="bg-gray-50">
   <div class="mx-auto max-w-screen-md p-3 sm:p-4">
@@ -89,45 +87,27 @@ const qs = new URLSearchParams(location.search);
 const TEAM_ID = qs.get('team') || '';
 const CODE    = (qs.get('code') || '').toUpperCase();
 
-/* ========= Supabase – byt till samma som i index.html ========= */
-const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // <-- BYT
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";               // <-- BYT
-
+/* ========= Supabase – samma som index.html ========= */
+const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage
-  }
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storage: window.localStorage }
 });
-
-// Exponera i konsolen för felsökning
-window.sb = sb; window.TEAM_ID = TEAM_ID; window.CODE = CODE;
 
 /* ========= Hjälpare ========= */
 const $ = s => document.querySelector(s);
 const pctText = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
 const pctNum  = (saves, shots) => shots>0 ? +(((saves/shots)*100).toFixed(2)) : null;
 const escCSV  = v => { const s=String(v??''); return /[;"\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s; };
-function download(filename, content, mime){
-  const blob = new Blob([content], { type: (mime || 'text/plain') + ';charset=utf-8' });
-  const url = URL.createObjectURL(blob); const a = document.createElement('a');
-  a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
-}
+function download(filename, content, mime){ const b=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; a.click(); URL.revokeObjectURL(u); }
 
-/* ========= Vänta in/återställ session ========= */
+/* ========= Session ========= */
 async function ensureSession(timeoutMs=4000){
   let { data:{ session } } = await sb.auth.getSession();
   if (session) return session;
   return await new Promise(resolve => {
-    const timer = setTimeout(async () => {
-      const s = (await sb.auth.getSession()).data.session;
-      resolve(s || null);
-    }, timeoutMs);
-    const { data: sub } = sb.auth.onAuthStateChange((_evt, s) => {
-      if (s) { clearTimeout(timer); sub.subscription.unsubscribe(); resolve(s); }
-    });
+    const timer = setTimeout(async () => resolve((await sb.auth.getSession()).data.session || null), timeoutMs);
+    const { data: sub } = sb.auth.onAuthStateChange((_evt, s) => { if (s) { clearTimeout(timer); sub.subscription.unsubscribe(); resolve(s); } });
   });
 }
 
@@ -145,28 +125,32 @@ function renderCharts(rows){
   empty.classList.toggle('hidden', sv.some(v=>v!=null));
 
   if(svpctChart) svpctChart.destroy();
-  svpctChart = new Chart($('#svpctChart').getContext('2d'), {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Rädd%', data: sv, spanGaps:true, tension:0.3, pointRadius:3 },
-      { label:'3-matchers snitt', data: ma, spanGaps:true, borderDash:[6,4], tension:0.3, pointRadius:0 }
-    ]},
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{ y:{ suggestedMin:60, suggestedMax:100, ticks:{ callback:v=>v+'%' }}, x:{ ticks:{ autoSkip:true, maxRotation:0 } } },
-      plugins:{ legend:{ position:'bottom' } }
-    }
-  });
+  if (sv.some(v=>v!=null)){
+    svpctChart = new Chart($('#svpctChart').getContext('2d'), {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:'Rädd%', data: sv, spanGaps:true, tension:0.3, pointRadius:3 },
+        { label:'3-matchers snitt', data: ma, spanGaps:true, borderDash:[6,4], tension:0.3, pointRadius:0 }
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{ y:{ suggestedMin:60, suggestedMax:100, ticks:{ callback:v=>v+'%' }}, x:{ ticks:{ autoSkip:true, maxRotation:0 } } },
+        plugins:{ legend:{ position:'bottom' } }
+      }
+    });
+  }
 
   if(srChart) srChart.destroy();
-  srChart = new Chart($('#srChart').getContext('2d'), {
-    type:'bar',
-    data:{ labels, datasets:[
-      { label:'Skott', data: rows.map(r=>r.shots) },
-      { label:'Räddningar', data: rows.map(r=>r.saves) }
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
-  });
+  if (rows.length){
+    srChart = new Chart($('#srChart').getContext('2d'), {
+      type:'bar',
+      data:{ labels, datasets:[
+        { label:'Skott', data: rows.map(r=>r.shots) },
+        { label:'Räddningar', data: rows.map(r=>r.saves) }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
+    });
+  }
 }
 
 /* ========= Tabell & export ========= */
@@ -193,16 +177,15 @@ function exportRowsCSV(goalie, rows){
     const p = r.shots>0?((r.saves/r.shots)*100).toFixed(2):'';
     lines.push([`"${r.date}"`, escCSV(r.opponent||''), r.minutes, r.saves, r.shots, p].join(';'));
   });
-  const csv = lines.join('\r\n'); const BOM = '\uFEFF';
-  download(`mv_${goalie.code}_matches.csv`, BOM+csv, 'text/csv');
+  const BOM = '\uFEFF'; download(`mv_${goalie.code}_matches.csv`, BOM+lines.join('\r\n'), 'text/csv');
 }
 
-/* ========= Huvudladdning ========= */
+/* ========= Laddning ========= */
 async function loadPage(){
   if(!TEAM_ID || !CODE){ $('#msg').textContent='Saknar team eller kod i URL.'; return; }
 
   try{
-    // 1) Målvakten
+    // Målvakt
     const g = await sb.from('goalies')
       .select('id,name,code')
       .eq('team_id', TEAM_ID).eq('code', CODE)
@@ -213,7 +196,7 @@ async function loadPage(){
     $('#g-name').textContent = `${g.data.name} (${g.data.code})`;
     $('#g-meta').textContent = `Team: ${TEAM_ID.slice(0,8)}…`;
 
-    // 2) Stats för målvakten
+    // Stats
     const st = await sb.from('match_goalie_stats')
       .select('match_id, minutes, saves, shots')
       .eq('team_id', TEAM_ID)
@@ -228,21 +211,21 @@ async function loadPage(){
       return;
     }
 
-    // 3) Matchinfo
+    // Matcher
     const m = await sb.from('matches')
       .select('id, date, opponent')
       .in('id', matchIds)
       .order('date', { ascending:true });
     if (m.error) throw m.error;
 
-    // 4) Sammanfoga
+    // Sammanfoga
     const statById = Object.fromEntries((st.data||[]).map(x => [x.match_id, x]));
     const rows = (m.data||[]).map(mm => {
       const e = statById[mm.id] || { minutes:0, saves:0, shots:0 };
       return { date:mm.date, opponent:mm.opponent, minutes:e.minutes|0, saves:e.saves|0, shots:e.shots|0 };
     }).sort((a,b)=>a.date.localeCompare(b.date));
 
-    // 5) Summera + render
+    // Summera + render
     const minutes = rows.reduce((a,r)=>a+r.minutes,0);
     const saves   = rows.reduce((a,r)=>a+r.saves,0);
     const shots   = rows.reduce((a,r)=>a+r.shots,0);
