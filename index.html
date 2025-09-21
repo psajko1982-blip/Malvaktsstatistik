@@ -307,6 +307,23 @@ function clearShotsForCurrent(){
 
 // ===== Spara skott till DB efter att matchen skapats =====
 // ===== Spara skott till DB efter att matchen skapats =====
+async function dbDeleteMatch(matchId){
+  if (!matchId) throw new Error('matchId saknas');
+  if (!CURRENT_TEAM_ID) throw new Error('CURRENT_TEAM_ID saknas');
+
+  // shots har FK on delete cascade (om du satt så i DB); annars rensas de av RLS-policy separat.
+  const { error } = await sb
+    .from('matches')
+    .delete()
+    .eq('id', matchId)
+    .eq('team_id', CURRENT_TEAM_ID);  // extra skydd
+
+  if (error) throw error;
+  const msg = 'Match borttagen.';
+  const box = document.getElementById('app-msg');
+  if (box) box.textContent = msg;
+}
+
 async function dbInsertShots(matchId){
   if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
   if (!matchId) throw new Error('Saknar matchId vid skottinsert');
@@ -1343,6 +1360,28 @@ async function dbInsertShots(matchId){
         `;
 
         wrap.appendChild(card);
+        // koppla klick bara en gång
+        if (!wrap.__hasDeleteHandler__) {
+        wrap.addEventListener('click', async (e) => {
+            const a = e.target.closest('[data-del]');
+            if (!a) return;
+
+            e.preventDefault();
+            const matchId = a.dataset.del;
+            if (!matchId) return;
+
+            if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
+
+            try {
+            await dbDeleteMatch(matchId);
+            await refreshAll();
+            } catch (err) {
+            showError('delete-match', err);
+            }
+        });
+        wrap.__hasDeleteHandler__ = true;
+        }
+
       }
     }
 
