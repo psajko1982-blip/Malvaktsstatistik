@@ -257,8 +257,44 @@ async function compareNow(){
     console.error(e);
     $('#msg').textContent = e?.message || String(e);
   }
+
+  enableExport(perGoalie, dates);
 }
 
+
+function buildCompareCSVs(perGoalie, dates){
+  const head1 = ['code','name','minutes','saves','shots','save_pct'];
+  const lines1 = [head1.join(';')];
+  Object.values(perGoalie).forEach(g=>{
+    const minutes = g.series.reduce((a,b)=>a+(b.minutes||0),0);
+    const saves   = g.series.reduce((a,b)=>a+(b.saves||0),0);
+    const shots   = g.series.reduce((a,b)=>a+(b.shots||0),0);
+    const p = shots>0?((saves/shots)*100).toFixed(2):'';
+    lines1.push([g.code, escCSV(g.name), minutes, saves, shots, p].join(';'));
+  });
+  const goalies = Object.values(perGoalie);
+  const head2 = ['date', ...goalies.map(g=>`${g.code}_svpct`)];
+  const lines2 = [head2.join(';')];
+  dates.forEach(d=>{
+    const row = [d];
+    goalies.forEach(g=>{
+      const rec = g.series.find(s=>s.date===d);
+      row.push(rec && rec.shots>0 ? ((rec.saves/rec.shots)*100).toFixed(2) : '');
+    });
+    lines2.push(row.join(';'));
+  });
+  const BOM='\uFEFF';
+  return { totalsCSV: BOM+lines1.join('\r\n'), timelineCSV: BOM+lines2.join('\r\n') };
+}
+function enableExport(perGoalie, dates){
+  const btn = document.getElementById('btn-export');
+  btn.disabled = false;
+  btn.onclick = () => {
+    const { totalsCSV, timelineCSV } = buildCompareCSVs(perGoalie, dates);
+    download('compare_totals.csv', totalsCSV, 'text/csv');
+    download('compare_timeline.csv', timelineCSV, 'text/csv');
+  };
+}
 /* ===== Boot ===== */
 (async () => {
   $('#team-id').value = TEAM_ID || '(saknas – lägg ?team=...)';

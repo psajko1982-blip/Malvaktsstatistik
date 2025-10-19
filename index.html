@@ -254,6 +254,169 @@
       document.getElementById('shot-modal').classList.remove('flex');
       CURRENT_SHOT_CODE = null;
     }
+// ==== Edit Match Feature ====
+let EDIT_MATCH_ID = null;
+let EDIT_ENTRIES = [];
+let EDIT_SHOT_BUF = {};
+
+async function openEditMatchModal(matchId){
+  try{
+    EDIT_MATCH_ID = matchId;
+    $('#edit-msg').textContent = '';
+
+    const { data: m, error: me } = await sb
+      .from('matches').select('id,date,opponent,result,notes,team_id').eq('id', matchId).single();
+    if (me) throw me;
+    if (m.team_id !== CURRENT_TEAM_ID) throw new Error('Fel team');
+
+    const { data: rows, error: se } = await sb
+      .from('match_goalie_stats')
+      .select('minutes,saves,shots,goalie_id,goalies:goalie_id(code,name)')
+      .eq('match_id', matchId).order('goalie_id');
+    if (se) throw se;
+
+    $('#edit-date').value  = m.date || '';
+    $('#edit-opp').value   = m.opponent || '';
+    $('#edit-res').value   = m.result || 'V';
+    $('#edit-notes').value = m.notes || '';
+
+    EDIT_ENTRIES = (rows||[]).map(r => ({
+      code: (r.goalies?.code || '').toUpperCase(),
+      minutes: Number(r.minutes||0),
+      saves: Number(r.saves||0),
+      shots: Number(r.shots||0),
+      goalie_id: r.goalie_id
+    }));
+
+    const shots = await dbLoadShotsForMatch(matchId);
+    EDIT_SHOT_BUF = {};
+    shots.forEach(s => {
+      const ent = EDIT_ENTRIES.find(e => e.goalie_id === s.goalie_id);
+      if (!ent) return;
+      const code = ent.code;
+      (EDIT_SHOT_BUF[code] ||= []).push({
+        x:s.x, y:s.y, period:s.period||1, time_sec:s.time_sec||0, result:s.result||'save'
+      });
+    });
+
+    const wrap = $('#edit-goalies'); wrap.innerHTML = '';
+    EDIT_ENTRIES.forEach(e => {
+      const div = document.createElement('div');
+      div.className = 'rounded-xl border p-2';
+      div.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-medium">${e.code}</div>
+          <button class="text-xs underline" data-editshots="${e.code}">Redigera skott (${(EDIT_SHOT_BUF[e.code]||[]).length})</button>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
+          <label>Min <input data-min="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.minutes}"></label>
+          <label>Räddn <input data-sav="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.saves}"></label>
+          <label>Skott <input data-sht="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.shots}"></label>
+        </div>`;
+      wrap.appendChild(div);
+    });
+    wrap.querySelectorAll('[data-editshots]').forEach(btn=>{
+      btn.onclick = () => openEditShots(btn.dataset.editshots);
+    });
+
+    const mm = $('#edit-modal'); mm.classList.remove('hidden'); mm.classList.add('flex');
+  }catch(e){ showError('open-edit', e); }
+}
+
+function closeEditModal(){
+  const mm = $('#edit-modal'); mm.classList.add('hidden'); mm.classList.remove('flex');
+  EDIT_MATCH_ID = null; EDIT_ENTRIES = []; EDIT_SHOT_BUF = {};
+}
+
+function openEditShots(code){
+  CURRENT_SHOT_CODE = code;
+  SHOTS_BUFFER[code] = (EDIT_SHOT_BUF[code] || []).map(s => ({...s}));
+  renderShotDots();
+  $('#shot-modal-code').textContent = code;
+  $('#shot-modal').classList.remove('hidden'); $('#shot-modal').classList.add('flex');
+}
+
+const __origCloseShot = closeShotModal;
+closeShotModal = function(){
+  if (CURRENT_SHOT_CODE){
+    EDIT_SHOT_BUF[CURRENT_SHOT_CODE] = (SHOTS_BUFFER[CURRENT_SHOT_CODE]||[]).map(s=>({...s}));
+  }
+  __origCloseShot();
+};
+
+async function dbReplaceManualStats(matchId, entries){
+  let { error: dErr } = await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
+  if (dErr) throw dErr;
+  const rows = (entries||[]).filter(e => (Number(e.minutes||0)+Number(e.saves||0)+Number(e.shots||0))>0)
+    .map(e => ({ team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: e.goalie_id,
+                 minutes: Number(e.minutes||0), saves: Number(e.saves||0), shots: Number(e.shots||0) }));
+  if (rows.length){
+    const { error: iErr } = await sb.from('match_goalie_stats').insert(rows);
+    if (iErr) throw iErr;
+  }
+}
+
+async function dbReplaceShots(matchId, codeToShots){
+  const { data: gData, error: gErr } = await sb.from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
+  if (gErr) throw gErr;
+  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code||'').toUpperCase(), g.id]));
+
+  let { error: dErr } = await sb.from('shots').delete().eq('match_id', matchId).eq('team_id', CURRENT_TEAM_ID);
+  if (dErr) throw dErr;
+
+  const rows = [];
+  for (const [code, arr] of Object.entries(codeToShots||{})){
+    const gid = idByCode[String(code||'').toUpperCase()]; if (!gid) continue;
+    (arr||[]).forEach(s => rows.push({
+      team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: gid,
+      x:s.x, y:s.y, period:s.period||1, time_sec:s.time_sec||0, result:s.result||'save'
+    }));
+  }
+  if (rows.length){
+    const { error: iErr } = await sb.from('shots').insert(rows);
+    if (iErr) throw iErr;
+  }
+}
+
+async function saveEditMatch(){
+  try{
+    $('#edit-msg').textContent = '';
+    if (!EDIT_MATCH_ID) throw new Error('Saknar matchId');
+
+    const date  = $('#edit-date').value;
+    const opp   = $('#edit-opp').value.trim();
+    const res   = $('#edit-res').value;
+    const notes = $('#edit-notes').value.trim();
+
+    let { error: uErr } = await sb.from('matches')
+      .update({ date, opponent: opp, result: res, notes })
+      .eq('id', EDIT_MATCH_ID).eq('team_id', CURRENT_TEAM_ID);
+    if (uErr) throw uErr;
+
+    EDIT_ENTRIES = EDIT_ENTRIES.map(e => ({
+      ...e,
+      minutes: Number(($(`input[data-min="${e.code}"]`)||{}).value || 0),
+      saves:   Number(($(`input[data-sav="${e.code}"]`)||{}).value || 0),
+      shots:   Number(($(`input[data-sht="${e.code}"]`)||{}).value || 0),
+    }));
+
+    await dbReplaceManualStats(EDIT_MATCH_ID, EDIT_ENTRIES);
+    await dbReplaceShots(EDIT_MATCH_ID, EDIT_SHOT_BUF);
+
+    $('#edit-msg').textContent = 'Sparat';
+    closeEditModal();
+    await refreshAll();
+  }catch(e){ showError('save-edit', e); }
+}
+
+// Delegate click for edit buttons
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-edit-match]'); if (!btn) return;
+  e.preventDefault();
+  openEditMatchModal(btn.dataset.editMatch);
+});
+// ==== End Edit Match Feature ====
+
     function renderShotDots(){
       const dots = document.getElementById('shot-dots');
       dots.innerHTML = '';
@@ -989,7 +1152,7 @@
               <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
               <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
             </div>
-            <a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a>
+            <div class="flex items-center gap-3"><button class="text-sm underline" data-edit-match="${m.id}">Redigera</button><a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a></div>
           </div>`;
         const sMap = shotStatsByMatch.get(m.id)  || new Map();
         const gMap = manualStatsByMatch.get(m.id) || new Map();
@@ -1180,5 +1343,40 @@
       } catch (e){ showError('refresh-all', e); }
     }
   </script>
+
+<!-- Modal: Redigera match -->
+<div id="edit-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+  <div class="bg-white rounded-2xl p-4 w-full max-w-lg">
+    <div class="flex items-center justify-between mb-2">
+      <div class="font-semibold">Redigera match</div>
+      <button type="button" class="text-sm underline" onclick="closeEditModal()">Stäng</button>
+    </div>
+    <div class="grid gap-2 sm:grid-cols-2">
+      <label class="text-sm">Datum
+        <input id="edit-date" type="date" class="w-full border rounded-xl p-2">
+      </label>
+      <label class="text-sm">Motstånd
+        <input id="edit-opp" type="text" class="w-full border rounded-xl p-2" placeholder="t.ex. Kumla">
+      </label>
+      <label class="text-sm sm:col-span-2">Resultat
+        <select id="edit-res" class="w-full border rounded-xl p-2">
+          <option value="V">Vinst</option><option value="O">Oavgjort</option><option value="F">Förlust</option>
+        </select>
+      </label>
+      <label class="text-sm sm:col-span-2">Kommentar
+        <textarea id="edit-notes" rows="2" class="w-full border rounded-xl p-2"></textarea>
+      </label>
+    </div>
+    <div class="border-t my-3"></div>
+    <div id="edit-goalies" class="space-y-2"></div>
+    <div class="flex items-center justify-between mt-3">
+      <div class="text-xs text-gray-500" id="edit-msg"></div>
+      <div class="flex gap-2">
+        <button type="button" class="rounded-xl border px-3 py-2" onclick="saveEditMatch()">Spara</button>
+        <button type="button" class="rounded-xl border px-3 py-2" onclick="closeEditModal()">Avbryt</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
