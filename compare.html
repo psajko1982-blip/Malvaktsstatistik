@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}</style>
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="bg-gray-50">
   <div class="mx-auto max-w-screen-lg p-3 sm:p-4">
@@ -305,5 +306,10 @@ function enableExport(perGoalie, dates){
 })();
 document.getElementById('btn-compare').addEventListener('click', compareNow);
 </script>
+
+<script>
+if ('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+</script>
+
 </body>
 </html>

@@ -13,6 +13,7 @@
     input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type=number] { -moz-appearance: textfield; }
   </style>
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="bg-gray-50">
   <div class="mx-auto max-w-screen-sm p-3 sm:p-4">
@@ -183,7 +184,14 @@
             <label class="text-sm col-span-2">Tid (mm:ss)
               <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
             </label>
-            <label class="text-sm col-span-3">Resultat
+            <label class="text-sm">Spelläge
+              <select id="shot-situation" class="w-full border rounded-xl p-2">
+                <option value="EV">EV (5v5)</option>
+                <option value="PP">PP</option>
+                <option value="PK">PK</option>
+              </select>
+            </label>
+            <label class="text-sm col-span-2">Resultat
               <select id="shot-result" class="w-full border rounded-xl p-2">
                 <option value="save">Räddning</option>
                 <option value="goal">Mål</option>
@@ -1119,7 +1127,8 @@ document.addEventListener('click', (e) => {
       for (const s of filtered){
         const x = pad + (W - pad*2) * (Number(s.x) || 0);
         const y = pad + (H - pad*2) * (Number(s.y) || 0);
-        switch ((s.result || '').toLowerCase()){
+        const base = String((s.result||'')).toLowerCase().split('|')[0];
+        switch (base){
           case 'goal':  drawX(x, y, 6, '#ef4444'); break;
           case 'save':  drawCircle(x, y, 5, '#10b981', true); break;
           case 'block': drawSquare(x, y, 5, '#3b82f6'); break;
@@ -1130,10 +1139,56 @@ document.addEventListener('click', (e) => {
       containerEl.appendChild(svg);
     }
     function renderShotLegend(legendEl, shots, goalieFilter='ALL'){
-      const counts = { save:0, goal:0, miss:0, block:0 };
+      const counts = { save:0, goal:0, miss:0, block:0 }
+    // ==== xG & Heatmap helpers ====
+    function computeShotXG(W, H, pad, sx, sy){
+      const x = pad + (W - pad*2) * (Number(sx) || 0);
+      const y = pad + (H - pad*2) * (Number(sy) || 0);
+      const goalLeft = {x: pad, y: H/2};
+      const goalRight= {x: W - pad, y: H/2};
+      const dL = Math.hypot(goalLeft.x - x, goalLeft.y - y);
+      const dR = Math.hypot(goalRight.x - x, goalRight.y - y);
+      const goal = dL < dR ? goalLeft : goalRight;
+      const dist = Math.max(1, Math.hypot(goal.x - x, goal.y - y)); // pixels
+      const ang = Math.abs(Math.atan2(y - goal.y, goal.x - x)); // 0 = rakt fram
+      // Heuristisk logistic: justerade koeff för rimliga 0.02–0.45 xG spann
+      const a = 2.2, b = -0.02, c = -1.2;
+      const z = a + b*dist + c*ang;
+      const xg = 1 / (1 + Math.exp(-z));
+      return xg;
+    }
+    function drawHeatmap(canvas, W, H, pad, shots){
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width  = W;
+      const h = canvas.height = H;
+      ctx.clearRect(0,0,w,h);
+      const grid = 40, gh = 17;
+      const cellW = (W - pad*2) / grid;
+      const cellH = (H - pad*2) / gh;
+      const acc = Array.from({length: gh}, () => Array(grid).fill(0));
+      shots.forEach(s=>{
+        const x = pad + (W - pad*2) * (Number(s.x)||0);
+        const y = pad + (H - pad*2) * (Number(s.y)||0);
+        const cx = Math.min(grid-1, Math.max(0, Math.floor((x - pad)/cellW)));
+        const cy = Math.min(gh-1,   Math.max(0, Math.floor((y - pad)/cellH)));
+        acc[cy][cx] += 1;
+      });
+      let maxV = 0; acc.forEach(r=>r.forEach(v=>{ if(v>maxV) maxV=v; }));
+      if (maxV<=0) return;
+      for (let cy=0; cy<gh; cy++){
+        for (let cx=0; cx<grid; cx++){
+          const v = acc[cy][cx] / maxV;
+          const alpha = Math.pow(v, 0.6) * 0.6;
+          if (alpha <= 0) continue;
+          ctx.fillStyle = 'rgba(255,0,0,'+alpha.toFixed(3)+')';
+          ctx.fillRect(Math.round(pad + cx*cellW), Math.round(pad + cy*cellH), Math.ceil(cellW), Math.ceil(cellH));
+        }
+      }
+    }
+;
       for (const s of shots){
         if (goalieFilter !== 'ALL' && s.goalie_id !== goalieFilter) continue;
-        const k = (s.result || '').toLowerCase(); if (k in counts) counts[k] += 1;
+        const k = String((s.result||'')).toLowerCase().split('|')[0]; if (k in counts) counts[k] += 1;
       }
       legendEl.innerHTML = `Räddn: ${counts.save} • Mål: ${counts.goal} • Miss: ${counts.miss} • Block: ${counts.block}`;
     }
@@ -1213,10 +1268,15 @@ document.addEventListener('click', (e) => {
           </div>
           <div id="shots-wrap-${m.id}" class="hidden mt-2">
             <div class="flex items-center gap-2 mb-2">
+              <label class="flex items-center gap-1 text-xs"><input type="checkbox" data-heatmap="${m.id}"> Heatmap</label>
+              <span class="text-xs">xG: <b id="xg-${m.id}">–</b></span>
               <label class="text-xs">Målvakt:</label>
               <select id="shots-filter-${m.id}" class="border rounded px-2 py-1 text-sm"></select>
             </div>
-            <div id="rink-${m.id}" class="w-full h-48 rounded-xl border bg-white"></div>
+            <div class="relative">
+              <div id="rink-${m.id}" class="w-full h-48 rounded-xl border bg-white"></div>
+              <canvas id="heat-${m.id}" class="absolute inset-0 w-full h-48 pointer-events-none hidden"></canvas>
+            </div>
             <div id="legend-${m.id}" class="mt-2 text-xs text-gray-600"></div>
           </div>`;
         wrap.appendChild(card);
@@ -1248,10 +1308,26 @@ document.addEventListener('click', (e) => {
               const label = g ? `${g.name} (${g.code})` : 'Okänd målvakt';
               return `<option value="${gid}">${label}</option>`;
             }).join('');
-          const draw = () => {
+          
+          selEl.onchange = draw;
+          const heatChk = document.querySelector('[data-heatmap="'+matchId+'"]'); if (heatChk) heatChk.onchange = draw;
+const draw = () => {
             const filter = selEl.value || 'ALL';
             renderShotMap(rinkEl, shots, goalieById, filter);
             renderShotLegend(legendEl, shots, filter);
+            // xG
+            const W = rinkEl.clientWidth || 360, H = Math.round(W*0.6), pad=8;
+            const filtered = shots.filter(s => filter==='ALL' || s.goalie_id===filter);
+            const xgSum = filtered.filter(s=>String((s.result||'')).toLowerCase().startsWith('goal') || String((s.result||'')).toLowerCase().startsWith('save'))
+              .reduce((a,s)=>a+computeShotXG(W,H,pad,s.x,s.y),0);
+            const xgEl = document.getElementById('xg-'+matchId); if (xgEl) xgEl.textContent = xgSum.toFixed(2);
+            // heatmap
+            const chk = document.querySelector('[data-heatmap="'+matchId+'"]');
+            const cvs = document.getElementById('heat-'+matchId);
+            if (chk && cvs){
+              cvs.classList.toggle('hidden', !chk.checked);
+              if (chk.checked) drawHeatmap(cvs, W, H, pad, filtered);
+            }
           };
           draw();
           if (!selEl.__hasHandler){ selEl.addEventListener('change', draw); selEl.__hasHandler = true; }
@@ -1378,5 +1454,10 @@ document.addEventListener('click', (e) => {
     </div>
   </div>
 </div>
+
+<script>
+if ('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
+</script>
+
 </body>
 </html>
