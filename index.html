@@ -499,8 +499,9 @@
     return data || [];
   }
 
+    // Hämta matcher + (om möjligt) statistik från match_goalie_stats
   async function dbMatches(teamId, fromDate, toDate){
-  // 1. Hämta själva matcherna
+    // 1. Hämta själva matcherna – så som originalet typ gjorde
     let q = supabaseClient
       .from("matches")
       .select("*")
@@ -515,37 +516,53 @@
     if (error) throw error;
 
     const matchList = matches || [];
-    const matchIds = matchList.map(m => m.id);
+    const matchIds  = matchList.map(m => m.id);
 
-    // 2. Hämta målvaktsstatistik från tabellen match_goalie_stats
+    // 2. Försök hämta statistik från match_goalie_stats
     let statsByMatch = {};
-    if (matchIds.length > 0){
-      const { data: statsRows, error: statsErr } = await supabaseClient
-        .from("match_goalie_stats")
-        .select("match_id, goalie_id, minutes, shots, goals")
-        .in("match_id", matchIds);
 
-      if (statsErr) throw statsErr;
+    if (matchIds.length){
+      try {
+        const { data: statsRows, error: statsErr } = await supabaseClient
+          .from("match_goalie_stats")              // <- ditt tabellnamn
+          .select("match_id, goalie_id, minutes, shots, goals")
+          .in("match_id", matchIds);
 
-      statsByMatch = (statsRows || []).reduce((acc, row) => {
-        if (!acc[row.match_id]) acc[row.match_id] = {};
-        const shots = row.shots || 0;
-        const goals = row.goals || 0;
+        if (statsErr) {
+          console.warn("match_goalie_stats error:", statsErr);
+        } else if (statsRows && statsRows.length) {
+          statsByMatch = statsRows.reduce((acc, row) => {
+            if (!acc[row.match_id]) acc[row.match_id] = {};
 
-        acc[row.match_id][row.goalie_id] = {
-          minutes: row.minutes || 0,
-          shots,
-          goals
-        };
-        return acc;
-      }, {});
+            const shots = row.shots || 0;
+            const goals = row.goals || 0;
+
+            acc[row.match_id][row.goalie_id] = {
+              minutes: row.minutes || 0,
+              shots,
+              goals
+            };
+            return acc;
+          }, {});
+        }
+      } catch (e) {
+        console.warn("match_goalie_stats fatal error:", e);
+        // Viktigt: vi kastar INTE vidare, så appen fortsätter funka
+      }
     }
 
-    // 3. Lägg statistiken i stats_json så resten av koden fungerar oförändrat
-    return matchList.map(m => ({
-      ...m,
-      stats_json: JSON.stringify(statsByMatch[m.id] || {})
-    }));
+    // 3. Returnera matcher, och om vi har stats för en match: stoppa in det i stats_json
+    return matchList.map(m => {
+      const statsForMatch = statsByMatch[m.id];
+      if (!statsForMatch) {
+        // Låt ev. befintlig stats_json vara kvar
+        return m;
+      }
+      return {
+        ...m,
+        stats_json: JSON.stringify(statsForMatch)
+      };
+    });
   }
 
 
