@@ -364,8 +364,8 @@
 
 <script>
   // ---------- Supabase config ----------
-  const SUPABASE_URL = "https://okdvcvbmgposbhvrygop.supabase.co";   // byt till ditt
-  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";                     // byt till din
+  const SUPABASE_URL = "https://okdvcvbmgposbhvrygop.supabase.co";
+  const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // ---------- Hjälpfunktioner ----------
@@ -423,6 +423,8 @@
         await supabaseClient.auth.signOut();
         CURRENT_USER = null;
         renderAuth();
+        await initTeams();
+        await refreshAll();
       };
     } else {
       authArea.classList.add("hidden");
@@ -499,9 +501,8 @@
     return data || [];
   }
 
-    // Hämta matcher + (om möjligt) statistik från match_goalie_stats
+  // Hämta matcher + ev. statistik från match_goalie_stats
   async function dbMatches(teamId, fromDate, toDate){
-    // 1. Hämta själva matcherna – så som originalet typ gjorde
     let q = supabaseClient
       .from("matches")
       .select("*")
@@ -518,13 +519,12 @@
     const matchList = matches || [];
     const matchIds  = matchList.map(m => m.id);
 
-    // 2. Försök hämta statistik från match_goalie_stats
     let statsByMatch = {};
 
     if (matchIds.length){
       try {
         const { data: statsRows, error: statsErr } = await supabaseClient
-          .from("match_goalie_stats")              // <- ditt tabellnamn
+          .from("match_goalie_stats")
           .select("match_id, goalie_id, minutes, shots, goals")
           .in("match_id", matchIds);
 
@@ -547,24 +547,18 @@
         }
       } catch (e) {
         console.warn("match_goalie_stats fatal error:", e);
-        // Viktigt: vi kastar INTE vidare, så appen fortsätter funka
       }
     }
 
-    // 3. Returnera matcher, och om vi har stats för en match: stoppa in det i stats_json
     return matchList.map(m => {
       const statsForMatch = statsByMatch[m.id];
-      if (!statsForMatch) {
-        // Låt ev. befintlig stats_json vara kvar
-        return m;
-      }
+      if (!statsForMatch) return m;
       return {
         ...m,
         stats_json: JSON.stringify(statsForMatch)
       };
     });
   }
-
 
   async function dbCreateGoalie(teamId, code, name){
     const { data, error } = await supabaseClient
@@ -639,7 +633,6 @@
   }
 
   async function dbUpsertMatchStats(matchId, entries){
-    // enkel variant: radera allt för matchen och skriv in igen
     const { error: delErr } = await supabaseClient
       .from("match_goalie_stats")
       .delete()
@@ -668,7 +661,6 @@
 
     try {
       let teams = await dbMyTeams();
-      // ta bort ev. dubletter
       teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
 
       if (!teams.length) {
@@ -713,7 +705,6 @@
       showError("init-teams", e);
     }
   }
-
 
   // ---------- Filter ----------
   function getFilterRange(){
@@ -1554,4 +1545,105 @@
       a.click();
       URL.revokeObjectURL(url);
     } catch(e){
-      showError("export
+      showError("export-json", e);
+    }
+  }
+
+  // Just nu gör vi säkra, läs-bara imports (loggar bara datan).
+  function handleImportJSON(evt){
+    const file = evt.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(reader.result);
+        console.log("JSON import (endast logg i den här versionen):", data);
+        alert("JSON läst in och loggad i konsolen, men import till databasen är inte aktiverad ännu.");
+      } catch(e){
+        showError("import-json", e);
+      } finally {
+        evt.target.value = "";
+      }
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  function handleImportCSV(evt){
+    const file = evt.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      console.log("CSV import (endast logg i den här versionen):", reader.result);
+      alert("CSV läst in och loggad i konsolen, men import till databasen är inte aktiverad ännu.");
+      evt.target.value = "";
+    };
+    reader.readAsText(file, "utf-8");
+  }
+
+  // ---------- Tabs ----------
+  function initTabs(){
+    const buttons = $$(".tab-btn");
+    const panes   = $$(".tab-pane");
+    buttons.forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const target = btn.dataset.tab;
+        buttons.forEach(b=>{
+          if (b === btn){
+            b.classList.add("border-b-2","border-sky-500","text-sky-600");
+            b.classList.remove("text-slate-500");
+          } else {
+            b.classList.remove("border-b-2","border-sky-500","text-sky-600");
+            b.classList.add("text-slate-500");
+          }
+        });
+        panes.forEach(p=>{
+          if (p.id === target) p.classList.remove("hidden");
+          else p.classList.add("hidden");
+        });
+      });
+    });
+  }
+
+  // ---------- Init ----------
+  window.addEventListener("DOMContentLoaded", async () => {
+    // auth
+    $("#btn-auth").onclick = openAuthModal;
+    $("#auth-signin").onclick = ()=>handleAuth("signin");
+    $("#auth-signup").onclick = ()=>handleAuth("signup");
+
+    // målvakter & matcher
+    $("#btn-new-goalie").onclick = createNewGoalie;
+    $("#btn-new-match").onclick  = createNewMatch;
+
+    // edit modal
+    $("#edit-save").onclick = saveEditModal;
+
+    // shot modal
+    initShotRink();
+    $("#shot-save").onclick = saveShot;
+
+    // filter
+    $("#btn-clear-filter").onclick = () => {
+      $("#filter-from").value = "";
+      $("#filter-to").value   = "";
+      refreshAll();
+    };
+    $("#filter-from").onchange = refreshAll;
+    $("#filter-to").onchange   = refreshAll;
+
+    // import/export
+    $("#btn-export-json").onclick = exportJSON;
+    $("#imp-json").addEventListener("change", handleImportJSON);
+    $("#imp-csv").addEventListener("change", handleImportCSV);
+
+    // tabs
+    initTabs();
+
+    // user, teams, data
+    await refreshUser();
+    await initTeams();
+    await refreshAll();
+  });
+</script>
+</body>
+</html>
