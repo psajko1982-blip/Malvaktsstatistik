@@ -15,1244 +15,879 @@
   </style>
   <link rel="manifest" href="manifest.webmanifest">
 </head>
-<body class="bg-gray-50">
-  <div class="mx-auto max-w-screen-sm p-3 sm:p-4">
-    <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
-      <h1 class="text-xl font-bold">Målvaktsstatistik</h1>
-    </div>
-
-    <a id="btn-compare" class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">
-      Jämför målvakter
-    </a>
-
-    <!-- Auth -->
-    <div id="auth" class="rounded-2xl border bg-white p-4 shadow-sm mt-3">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold">Logga in</h2>
-        <button id="btn-signout" class="text-sm underline hidden">Logga ut</button>
-      </div>
-      <div id="auth-forms">
-        <div class="grid gap-2 sm:grid-cols-2">
-          <input id="email" type="email" placeholder="E-post" class="rounded-xl border p-2">
-          <input id="password" type="password" placeholder="Lösenord" class="rounded-xl border p-2">
-        </div>
-        <div class="grid grid-cols-2 gap-2 mt-2">
-          <button id="btn-signin" class="rounded-xl border py-2">Logga in</button>
-          <button id="btn-signup" class="rounded-xl border py-2">Skapa konto</button>
-        </div>
-        <div id="auth-msg" class="text-sm text-red-600 mt-2"></div>
-      </div>
-      <div id="whoami" class="text-sm text-gray-600 mt-2 hidden"></div>
-    </div>
-
-    <!-- Teamkontroll -->
-    <div id="team-bar" class="hidden rounded-2xl border bg-white p-3 shadow-sm mb-4 mt-3">
-      <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-        <div class="flex items-center gap-2">
-          <span class="text-sm text-gray-600">Team:</span>
-          <select id="team-select" class="rounded-xl border p-2 text-sm"></select>
-          <button id="btn-new-team" class="rounded-xl border px-3 py-2 text-sm">Nytt team</button>
-        </div>
-        <div class="flex items-center gap-2">
-          <input id="invite-email" type="email" placeholder="epost@exempel.se" class="rounded-xl border p-2 text-sm">
-          <button id="btn-invite" class="rounded-xl border px-3 py-2 text-sm">Bjud in</button>
-        </div>
-      </div>
-      <div id="team-msg" class="text-xs text-red-600 mt-2"></div>
-      <div id="invites-panel" class="text-sm text-gray-700 mt-2 hidden"></div>
-    </div>
-
-    <!-- App UI -->
-    <div id="app" class="hidden">
-      <!-- Snabb inmatning -->
-      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-        <div class="flex gap-2">
-          <div class="flex-1">
-            <label class="text-xs text-gray-500">Datum</label>
-            <input id="f-date" type="date" class="w-full rounded-xl border p-2">
+<body class="bg-slate-100 text-slate-900">
+  <div class="min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-slate-900 text-white">
+      <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-sky-500 flex items-center justify-center text-lg font-bold">MV</div>
+          <div>
+            <div class="font-semibold leading-tight">Målvaktsstatistik</div>
+            <div class="text-xs text-slate-300">Fokuserat på målvakten – skott, räddningar, mål, xG & skottkarta</div>
           </div>
-          <div class="flex-1">
-            <label class="text-xs text-gray-500">Motstånd</label>
-            <input id="f-opp" type="text" placeholder="t.ex. Kumla" class="w-full rounded-xl border p-2">
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <div id="auth-area" class="hidden">
+            <div id="auth-user" class="text-right mb-1"></div>
+            <button id="btn-signout" class="px-3 py-1 border border-slate-500 rounded-full hover:bg-slate-800">Logga ut</button>
+          </div>
+          <button id="btn-auth" class="px-3 py-1 border border-slate-500 rounded-full hover:bg-slate-800">
+            Logga in / Skapa konto
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1">
+      <div class="max-w-5xl mx-auto px-4 py-4">
+        <!-- Team / Date row -->
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Mitt lag</label>
+            <select id="team-select" class="rounded-xl border border-slate-300 px-3 py-1.5 text-sm bg-white min-w-[200px]"></select>
+          </div>
+          <button id="btn-new-team" class="text-xs px-3 py-1.5 border border-slate-300 rounded-xl bg-white hover:bg-slate-50">
+            + Nytt lag
+          </button>
+          <div class="ml-auto flex items-center gap-2 text-xs text-slate-500">
+            <span>Datumfilter:</span>
+            <input id="filter-from" type="date" class="border rounded px-2 py-1 text-xs">
+            <span>–</span>
+            <input id="filter-to" type="date" class="border rounded px-2 py-1 text-xs">
+            <button id="btn-clear-filter" class="text-[11px] px-2 py-1 border rounded-lg hover:bg-slate-50">Rensa</button>
           </div>
         </div>
 
-        <div class="mt-2">
-          <label class="text-xs text-gray-500">Resultat</label>
-          <div class="grid grid-cols-3 gap-2 mt-1">
-            <button data-res="V" class="resbtn rounded-xl border py-2 text-sm">Vinst</button>
-            <button data-res="O" class="resbtn rounded-xl border py-2 text-sm">Oavgjort</button>
-            <button data-res="F" class="resbtn rounded-xl border py-2 text-sm">Förlust</button>
-          </div>
-        </div>
-
-        <div class="mt-2">
-          <label class="text-xs text-gray-500">Kommentar</label>
-          <textarea id="f-notes" rows="2" placeholder="t.ex. bra tredje period, PP 2 mål..." class="w-full rounded-xl border p-2"></textarea>
-        </div>
-
-        <div class="mt-3">
-          <div class="flex items-center justify-between mb-1">
-            <label class="text-xs text-gray-500">Målvakter (min / räddningar / skott)</label>
-            <div class="flex gap-2">
-              <button id="btn-add-goalie" class="text-xs underline">Lägg till målvakt</button>
-              <button id="reset-entries" class="text-xs underline">Nollställ</button>
+        <!-- Summary row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+          <div class="bg-white rounded-2xl p-3 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <div class="text-xs text-slate-500">Matcher</div>
+                <div id="summary-matches" class="text-xl font-semibold">–</div>
+              </div>
+              <div class="text-right text-[11px] text-slate-500">
+                <div id="summary-result" class="font-medium">–</div>
+                <div>V / O / F</div>
+              </div>
+            </div>
+            <div class="mt-1 text-[11px] text-slate-500">
+              Filter påverkar statistiken nedan.
             </div>
           </div>
-          <div id="goalie-grid" class="space-y-2"></div>
-        </div>
 
-        <button id="add-match" class="mt-3 w-full rounded-2xl bg-black text-white py-3 font-medium">Lägg till match</button>
-        <div id="app-msg" class="text-sm text-red-600 mt-2"></div>
-      </div>
-
-      <!-- Översikt -->
-      <div id="cards" class="grid sm:grid-cols-2 gap-3 mb-4"></div>
-
-      <!-- Graf: Rädd% över tid -->
-      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-        <div class="flex items-center justify-between">
-          <div class="text-sm text-gray-500">Rädd% över tid</div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-gray-500">Målvakt</label>
-            <select id="chart-goalie" class="rounded-xl border p-2 text-sm"></select>
-          </div>
-        </div>
-        <div class="mt-3">
-          <canvas id="svpctChart" height="120"></canvas>
-          <div id="chart-empty" class="text-center text-sm text-gray-500 mt-2 hidden">
-            Ingen data att visa ännu.
-          </div>
-        </div>
-      </div>
-
-      <!-- Resultat-summering -->
-      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-        <div class="text-sm text-gray-500">Resultat</div>
-        <div class="grid grid-cols-3 gap-2 mt-2 text-center">
-          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Vinst</div><div id="stat-v" class="text-lg font-semibold">0</div></div>
-          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Oavgjort</div><div id="stat-o" class="text-lg font-semibold">0</div></div>
-          <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Förlust</div><div id="stat-f" class="text-lg font-semibold">0</div></div>
-        </div>
-        <div class="text-xs text-gray-500 mt-2">Tot. minuter (alla målvakter): <span id="stat-min" class="font-medium text-gray-700">0</span></div>
-      </div>
-
-      <!-- Export / Import -->
-      <div class="rounded-2xl border shadow-sm p-3 mb-4 bg-white">
-        <div class="text-sm text-gray-500 mb-2">Exportera / Importera</div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button id="btn-exp-json" class="rounded-xl border py-2">Export JSON</button>
-          <button id="btn-exp-csv"  class="rounded-xl border py-2">Export CSV</button>
-          <label class="rounded-xl border py-2 text-center cursor-pointer">
-            <input id="imp-json" type="file" accept=".json" class="hidden">Import JSON
-          </label>
-          <label class="rounded-xl border py-2 text-center cursor-pointer">
-            <input id="imp-csv"  type="file" accept=".csv"  class="hidden">Import CSV
-          </label>
-        </div>
-        <div class="text-xs text-gray-500 mt-2">
-          JSON innehåller målvakter + matcher. CSV är semikolon-separerad (;). Import gör upsert (datum+motstånd) och ersätter stats för matchen.
-        </div>
-      </div>
-
-      <!-- Modal: Lägg skott i aktuell match -->
-      <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
-        <div class="bg-white rounded-2xl p-4 w-full max-w-md">
-          <div class="flex items-center justify-between mb-2">
-            <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
-            <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
-          </div>
-
-          <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
-          <div id="shot-rink" class="relative w-full border rounded-xl overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
-            <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
-              <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
-              <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
-              <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
-              <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
-            </svg>
-            <!-- klick-markers -->
-            <div id="shot-dots" class="absolute inset-0"></div>
-          </div>
-
-          <div class="grid grid-cols-3 gap-2 mt-3">
-            <label class="text-sm">Period
-              <select id="shot-period" class="w-full border rounded-xl p-2">
-                <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
-              </select>
-            </label>
-            <label class="text-sm col-span-2">Tid (mm:ss)
-              <input id="shot-time" class="w-full border rounded-xl p-2" placeholder="00:00" value="00:00">
-            </label>
-            <label class="text-sm">Spelläge
-              <select id="shot-situation" class="w-full border rounded-xl p-2">
-                <option value="EV">EV (5v5)</option>
-                <option value="PP">PP</option>
-                <option value="PK">PK</option>
-              </select>
-            </label>
-            <label class="text-sm col-span-2">Resultat
-              <select id="shot-result" class="w-full border rounded-xl p-2">
-                <option value="save">Räddning</option>
-                <option value="goal">Mål</option>
-                <option value="miss">Utanför</option>
-                <option value="block">Blockerat</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="flex items-center justify-between mt-3">
-            <div class="text-xs text-gray-500">
-              <button type="button" class="underline" onclick="undoLastShot()">Ångra senaste</button>
-              · <button type="button" class="underline" onclick="clearShotsForCurrent()">Rensa alla</button>
+          <div class="bg-white rounded-2xl p-3 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <div class="text-xs text-slate-500">Totalt skott på mål</div>
+                <div id="summary-shots" class="text-xl font-semibold">–</div>
+              </div>
+              <div class="text-right text-[11px] text-slate-500">
+                <div class="font-medium" id="summary-goals">–</div>
+                <div>Insläppta mål</div>
+              </div>
             </div>
-            <button type="button" class="rounded-xl border px-3 py-1" onclick="closeShotModal()">Klar</button>
+            <div class="mt-1 text-[11px] text-slate-500">
+              Inklusive alla målvakter i laget.
+            </div>
           </div>
+
+          <div class="bg-white rounded-2xl p-3 shadow-sm">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <div class="text-xs text-slate-500">Genomsnittlig räddningsprocent</div>
+                <div id="summary-svpct" class="text-xl font-semibold">–</div>
+              </div>
+              <div class="text-right text-[11px] text-slate-500">
+                <div id="summary-goalies" class="font-medium">–</div>
+                <div>Målvakter med matcher</div>
+              </div>
+            </div>
+            <div class="mt-1 text-[11px] text-slate-500">
+              Beräknas på totala skott & mål per målvakt.
+            </div>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-3 border-b border-slate-200 flex gap-4 text-sm">
+          <button data-tab="tab-matches" class="tab-btn border-b-2 border-sky-500 text-sky-600 pb-2 -mb-px">
+            Matcher
+          </button>
+          <button data-tab="tab-goalies" class="tab-btn pb-2 text-slate-500">
+            Målvakter
+          </button>
+          <button data-tab="tab-import" class="tab-btn pb-2 text-slate-500">
+            Import / Export
+          </button>
+        </div>
+
+        <!-- Tab: Matches -->
+        <section id="tab-matches" class="tab-pane">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold">Matcher</h2>
+            <button id="btn-new-match" class="px-3 py-1.5 rounded-xl bg-sky-600 text-white text-sm hover:bg-sky-700">
+              + Ny match
+            </button>
+          </div>
+          <div id="matches-wrap" class="space-y-3"></div>
+          <div id="matches-empty" class="hidden text-sm text-slate-500 mt-4">
+            Inga matcher ännu. Klicka på <b>Ny match</b> för att lägga till.
+          </div>
+        </section>
+
+        <!-- Tab: Goalies -->
+        <section id="tab-goalies" class="tab-pane hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-semibold">Målvakter</h2>
+            <button id="btn-new-goalie" class="px-3 py-1.5 rounded-xl bg-sky-600 text-white text-sm hover:bg-sky-700">
+              + Ny målvakt
+            </button>
+          </div>
+          <div id="goalies-wrap" class="space-y-3"></div>
+          <div id="goalies-empty" class="hidden text-sm text-slate-500 mt-4">
+            Inga målvakter ännu. Lägg till en för att börja.
+          </div>
+        </section>
+
+        <!-- Tab: Import / Export -->
+        <section id="tab-import" class="tab-pane hidden">
+          <h2 class="text-base font-semibold mb-2">Import / Export</h2>
+          <div class="bg-white rounded-2xl p-3 shadow-sm mb-3">
+            <div class="text-sm font-medium mb-1">Exportera data</div>
+            <div class="text-xs text-slate-500 mb-2">
+              Exportera alla målvakter, matcher och skott som JSON. Kan sedan importeras i appen.
+            </div>
+            <button id="btn-export-json" class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm hover:bg-slate-50">
+              Ladda ner JSON
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl p-3 shadow-sm mb-3">
+            <div class="text-sm font-medium mb-1">Importera data</div>
+            <div class="text-xs text-slate-500 mb-2">
+              JSON: innehåller målvakter, matcher och skott (export från appen).<br>
+              CSV: endast matcher & statistik (t.ex. från Excel). CSV använder semikolon (<code>;</code>) som avgränsare.
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <label class="rounded-xl border px-3 py-2 text-center cursor-pointer text-sm">
+                <input id="imp-json" type="file" accept=".json" class="hidden">Import JSON
+              </label>
+              <label class="rounded-xl border px-3 py-2 text-center cursor-pointer text-sm">
+                <input id="imp-csv"  type="file" accept=".csv"  class="hidden">Import CSV
+              </label>
+            </div>
+            <div class="text-xs text-gray-500 mt-2">
+              JSON innehåller målvakter + matcher. CSV är semikolon-separerad med rubriker. Import gör upsert (datum+motstånd) och ersätter stats för matchen.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Lägg skott i aktuell match -->
+  <div id="shot-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+    <div class="bg-white rounded-2xl p-4 w-full max-w-md">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold">Lägg skott – <span id="shot-modal-code"></span></div>
+        <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
+      </div>
+
+      <div class="text-xs text-gray-500 mb-1">Klicka på rinken för att lägga skott</div>
+      <div id="shot-rink" class="relative w-full border rounded-xl bg-slate-100 overflow-hidden" style="aspect-ratio: 200/85; cursor: crosshair;">
+        <svg viewBox="0 0 200 85" class="absolute inset-0 w-full h-full pointer-events-none">
+          <rect x="0" y="0" width="200" height="85" rx="10" ry="10" fill="#f8fafc" stroke="#e5e7eb"/>
+          <line x1="100" y1="0" x2="100" y2="85" stroke="#e11d48" stroke-width="0.8"/>
+          <rect x="0" y="30" width="5" height="25" fill="#fee2e2"/>
+          <rect x="195" y="30" width="5" height="25" fill="#fee2e2"/>
+        </svg>
+        <!-- klick-markers -->
+        <div id="shot-dots" class="absolute inset-0"></div>
+      </div>
+
+      <div class="mt-3 flex items-center justify-between gap-2 text-xs">
+        <div class="flex-1">
+          <label class="block text-[11px] text-gray-500 mb-1">Resultat</label>
+          <select id="shot-result" class="border rounded px-2 py-1 w-full text-xs">
+            <option value="save">Räddning</option>
+            <option value="goal">Mål</option>
+            <option value="miss">Utanför</option>
+            <option value="post">Ribba/Stolpe</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="block text-[11px] text-gray-500 mb-1">Period</label>
+          <select id="shot-period" class="border rounded px-2 py-1 w-full text-xs">
+            <option value="1">1:a</option>
+            <option value="2">2:a</option>
+            <option value="3">3:e</option>
+            <option value="OT">Övertid</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="block text-[11px] text-gray-500 mb-1">Tid (mm:ss)</label>
+          <input id="shot-time" type="text" class="border rounded px-2 py-1 w-full text-xs" placeholder="t.ex. 12:34">
         </div>
       </div>
 
-      <!-- Matcher -->
-      <div id="match-list" class="space-y-3 mb-24"></div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button type="button" class="px-3 py-1.5 text-sm border rounded-xl" onclick="closeShotModal()">Avbryt</button>
+        <button id="shot-save" type="button" class="px-3 py-1.5 text-sm rounded-xl bg-sky-600 text-white hover:bg-sky-700">
+          Spara skott
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Redigera match -->
+  <div id="edit-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+    <div class="bg-white rounded-2xl p-4 w-full max-w-lg max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold">Redigera match</div>
+        <button type="button" class="text-sm underline" onclick="closeEditModal()">Stäng</button>
+      </div>
+      <div id="edit-body" class="flex-1 overflow-auto text-sm">
+        <!-- Fylls dynamiskt -->
+      </div>
+      <div class="mt-3 flex justify-end gap-2">
+        <button type="button" class="px-3 py-1.5 text-sm border rounded-xl" onclick="closeEditModal()">Avbryt</button>
+        <button id="edit-save" type="button" class="px-3 py-1.5 text-sm rounded-xl bg-sky-600 text-white hover:bg-sky-700">
+          Spara ändringar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth modal -->
+  <div id="auth-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+    <div class="bg-white rounded-2xl p-4 w-full max-w-sm">
+      <div class="flex items-center justify-between mb-2">
+        <div class="font-semibold">Logga in / Skapa konto</div>
+        <button type="button" class="text-sm underline" onclick="closeAuthModal()">Stäng</button>
+      </div>
+      <div class="space-y-2 text-sm">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">E-post</label>
+          <input id="auth-email" type="email" class="border rounded px-2 py-1 w-full text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Lösenord</label>
+          <input id="auth-password" type="password" class="border rounded px-2 py-1 w-full text-sm">
+        </div>
+        <div class="text-xs text-gray-500">
+          Kontot används för att spara dina lag, målvakter, matcher och skott i molnet (Supabase).
+        </div>
+        <div class="flex gap-2 mt-2">
+          <button id="auth-signin" class="flex-1 px-3 py-1.5 rounded-xl bg-sky-600 text-white text-sm hover:bg-sky-700">
+            Logga in
+          </button>
+          <button id="auth-signup" class="flex-1 px-3 py-1.5 rounded-xl border text-sm rounded-xl hover:bg-slate-50">
+            Skapa konto
+          </button>
+        </div>
+      </div>
+      <div id="auth-msg" class="text-sm text-red-600 mt-2"></div>
     </div>
   </div>
 
   <script>
-    // ===== Supabase-konfig =====
-    const SUPABASE_URL  = "https://okdvcvbmgposbhvrygop.supabase.co";   // din URL
-    const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg"; // din anon key
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-    const normCode = (c) => String(c || '').trim().toUpperCase();
+    // ---------- Konfig ----------
+    const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"; // byt till ditt
+    const SUPABASE_KEY = "public-anon-key"; // byt till din nyckel
 
-    // ===== Helpers =====
-    const $ = (s) => document.querySelector(s);
-    const today = () => new Date().toISOString().slice(0,10);
-    const num = (v) => { const n = Number(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
-    const sum = (a) => a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0);
-    const pct = (saves, shots) => shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ===== Skott-buffert (pågående match) =====
-    const SHOTS_BUFFER = {};
-    let CURRENT_SHOT_CODE = null;
+    // ---------- Hjälpfunktioner ----------
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
-    function mmssToSec(s){
-      const m = String(s||'').trim().split(':');
-      if (m.length !== 2) return 0;
-      const mm = parseInt(m[0],10), ss = parseInt(m[1],10);
-      return (Number.isFinite(mm)?mm:0)*60 + (Number.isFinite(ss)?ss:0);
+    function fmtPct(num){
+      if (num == null || isNaN(num)) return "–";
+      return (num*100).toFixed(1).replace(".", ",") + " %";
     }
-    function updateShotBadge(code){
-      const el = document.getElementById(`shot-count-${code}`);
-      if (!el) return;
-      const n = (SHOTS_BUFFER[code] || []).length;
-      el.textContent = `${n} skott`;
-      if (CURRENT_SHOT_CODE === code){
-        const hdr = document.getElementById('shot-modal-code');
-        if (hdr) hdr.textContent = `${code} · ${n} skott`;
+    function fmtInt(num){
+      if (num == null || isNaN(num)) return "–";
+      return String(Math.round(num));
+    }
+    function fmtDate(str){
+      if (!str) return "";
+      try {
+        const d = new Date(str);
+        if (Number.isNaN(d.getTime())) return str;
+        return d.toLocaleDateString("sv-SE");
+      } catch(e){ return str; }
+    }
+    function fmtTimeMin(min){
+      if (min == null || isNaN(min)) return "–";
+      return `${min.toFixed(1).replace(".", ",")} min`;
+    }
+    function showError(where, err){
+      console.error("Error in", where, err);
+      alert("Något gick fel ("+where+"). Kolla konsolen för detaljer.");
+    }
+
+    // ---------- Auth ----------
+    let CURRENT_USER = null;
+    let CURRENT_TEAM_ID = null;
+    let GOALIES = [];
+
+    async function refreshUser(){
+      const { data, error } = await supabaseClient.auth.getUser();
+      if (error || !data.user){
+        CURRENT_USER = null;
+      } else {
+        CURRENT_USER = data.user;
+      }
+      renderAuth();
+    }
+
+    function renderAuth(){
+      const authArea = $("#auth-area");
+      const authBtn = $("#btn-auth");
+      const authUser = $("#auth-user");
+      const btnSignout = $("#btn-signout");
+
+      if (CURRENT_USER){
+        authArea.classList.remove("hidden");
+        authBtn.classList.add("hidden");
+        authUser.textContent = CURRENT_USER.email || "Inloggad";
+        btnSignout.onclick = async () => {
+          await supabaseClient.auth.signOut();
+          CURRENT_USER = null;
+          renderAuth();
+        };
+      } else {
+        authArea.classList.add("hidden");
+        authBtn.classList.remove("hidden");
       }
     }
-    function openShotModal(code){
-      CURRENT_SHOT_CODE = code;
-      document.getElementById('shot-modal-code').textContent = code;
-      document.getElementById('shot-modal').classList.remove('hidden');
-      document.getElementById('shot-modal').classList.add('flex');
-      renderShotDots();
+
+    function openAuthModal(){
+      $("#auth-modal").classList.remove("hidden");
+      $("#auth-modal").classList.add("flex");
+      $("#auth-msg").textContent = "";
     }
-    function closeShotModal(){
-      document.getElementById('shot-modal').classList.add('hidden');
-      document.getElementById('shot-modal').classList.remove('flex');
-      CURRENT_SHOT_CODE = null;
-    }
-// ==== Edit Match Feature ====
-let EDIT_MATCH_ID = null;
-let EDIT_ENTRIES = [];
-let EDIT_SHOT_BUF = {};
-
-async function openEditMatchModal(matchId){
-  try{
-    EDIT_MATCH_ID = matchId;
-    $('#edit-msg').textContent = '';
-
-    const { data: m, error: me } = await sb
-      .from('matches').select('id,date,opponent,result,notes,team_id').eq('id', matchId).single();
-    if (me) throw me;
-    if (m.team_id !== CURRENT_TEAM_ID) throw new Error('Fel team');
-
-    const { data: rows, error: se } = await sb
-      .from('match_goalie_stats')
-      .select('minutes,saves,shots,goalie_id,goalies:goalie_id(code,name)')
-      .eq('match_id', matchId).order('goalie_id');
-    if (se) throw se;
-
-    $('#edit-date').value  = m.date || '';
-    $('#edit-opp').value   = m.opponent || '';
-    $('#edit-res').value   = m.result || 'V';
-    $('#edit-notes').value = m.notes || '';
-
-    EDIT_ENTRIES = (rows||[]).map(r => ({
-      code: (r.goalies?.code || '').toUpperCase(),
-      minutes: Number(r.minutes||0),
-      saves: Number(r.saves||0),
-      shots: Number(r.shots||0),
-      goalie_id: r.goalie_id
-    }));
-
-    const shots = await dbLoadShotsForMatch(matchId);
-    EDIT_SHOT_BUF = {};
-    shots.forEach(s => {
-      const ent = EDIT_ENTRIES.find(e => e.goalie_id === s.goalie_id);
-      if (!ent) return;
-      const code = ent.code;
-      (EDIT_SHOT_BUF[code] ||= []).push({
-        x:s.x, y:s.y, period:s.period||1, time_sec:s.time_sec||0, result:s.result||'save'
-      });
-    });
-
-    const wrap = $('#edit-goalies'); wrap.innerHTML = '';
-    EDIT_ENTRIES.forEach(e => {
-      const div = document.createElement('div');
-      div.className = 'rounded-xl border p-2';
-      div.innerHTML = `
-        <div class="flex items-center justify-between gap-2">
-          <div class="font-medium">${e.code}</div>
-          <button class="text-xs underline" data-editshots="${e.code}">Redigera skott (${(EDIT_SHOT_BUF[e.code]||[]).length})</button>
-        </div>
-        <div class="grid grid-cols-3 gap-2 mt-2 text-sm">
-          <label>Min <input data-min="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.minutes}"></label>
-          <label>Räddn <input data-sav="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.saves}"></label>
-          <label>Skott <input data-sht="${e.code}" type="number" class="w-full border rounded-xl p-2" value="${e.shots}"></label>
-        </div>`;
-      wrap.appendChild(div);
-    });
-    wrap.querySelectorAll('[data-editshots]').forEach(btn=>{
-      btn.onclick = () => openEditShots(btn.dataset.editshots);
-    });
-
-    const mm = $('#edit-modal'); mm.classList.remove('hidden'); mm.classList.add('flex');
-  }catch(e){ showError('open-edit', e); }
-}
-
-function closeEditModal(){
-  const mm = $('#edit-modal'); mm.classList.add('hidden'); mm.classList.remove('flex');
-  EDIT_MATCH_ID = null; EDIT_ENTRIES = []; EDIT_SHOT_BUF = {};
-}
-
-function openEditShots(code){
-  CURRENT_SHOT_CODE = code;
-  SHOTS_BUFFER[code] = (EDIT_SHOT_BUF[code] || []).map(s => ({...s}));
-  renderShotDots();
-  $('#shot-modal-code').textContent = code;
-  $('#shot-modal').classList.remove('hidden'); $('#shot-modal').classList.add('flex');
-}
-
-const __origCloseShot = closeShotModal;
-closeShotModal = function(){
-  if (CURRENT_SHOT_CODE){
-    EDIT_SHOT_BUF[CURRENT_SHOT_CODE] = (SHOTS_BUFFER[CURRENT_SHOT_CODE]||[]).map(s=>({...s}));
-  }
-  __origCloseShot();
-};
-
-async function dbReplaceManualStats(matchId, entries){
-  let { error: dErr } = await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
-  if (dErr) throw dErr;
-  const rows = (entries||[]).filter(e => (Number(e.minutes||0)+Number(e.saves||0)+Number(e.shots||0))>0)
-    .map(e => ({ team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: e.goalie_id,
-                 minutes: Number(e.minutes||0), saves: Number(e.saves||0), shots: Number(e.shots||0) }));
-  if (rows.length){
-    const { error: iErr } = await sb.from('match_goalie_stats').insert(rows);
-    if (iErr) throw iErr;
-  }
-}
-
-async function dbReplaceShots(matchId, codeToShots){
-  const { data: gData, error: gErr } = await sb.from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
-  if (gErr) throw gErr;
-  const idByCode = Object.fromEntries((gData||[]).map(g => [String(g.code||'').toUpperCase(), g.id]));
-
-  let { error: dErr } = await sb.from('shots').delete().eq('match_id', matchId).eq('team_id', CURRENT_TEAM_ID);
-  if (dErr) throw dErr;
-
-  const rows = [];
-  for (const [code, arr] of Object.entries(codeToShots||{})){
-    const gid = idByCode[String(code||'').toUpperCase()]; if (!gid) continue;
-    (arr||[]).forEach(s => rows.push({
-      team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: gid,
-      x:s.x, y:s.y, period:s.period||1, time_sec:s.time_sec||0, result:s.result||'save'
-    }));
-  }
-  if (rows.length){
-    const { error: iErr } = await sb.from('shots').insert(rows);
-    if (iErr) throw iErr;
-  }
-}
-
-async function saveEditMatch(){
-  try{
-    $('#edit-msg').textContent = '';
-    if (!EDIT_MATCH_ID) throw new Error('Saknar matchId');
-
-    const date  = $('#edit-date').value;
-    const opp   = $('#edit-opp').value.trim();
-    const res   = $('#edit-res').value;
-    const notes = $('#edit-notes').value.trim();
-
-    let { error: uErr } = await sb.from('matches')
-      .update({ date, opponent: opp, result: res, notes })
-      .eq('id', EDIT_MATCH_ID).eq('team_id', CURRENT_TEAM_ID);
-    if (uErr) throw uErr;
-
-    EDIT_ENTRIES = EDIT_ENTRIES.map(e => ({
-      ...e,
-      minutes: Number(($(`input[data-min="${e.code}"]`)||{}).value || 0),
-      saves:   Number(($(`input[data-sav="${e.code}"]`)||{}).value || 0),
-      shots:   Number(($(`input[data-sht="${e.code}"]`)||{}).value || 0),
-    }));
-
-    await dbReplaceManualStats(EDIT_MATCH_ID, EDIT_ENTRIES);
-    await dbReplaceShots(EDIT_MATCH_ID, EDIT_SHOT_BUF);
-
-    $('#edit-msg').textContent = 'Sparat';
-    closeEditModal();
-    await refreshAll();
-  }catch(e){ showError('save-edit', e); }
-}
-
-// Delegate click for edit buttons
-document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-edit-match]'); if (!btn) return;
-  e.preventDefault();
-  openEditMatchModal(btn.dataset.editMatch);
-});
-// ==== End Edit Match Feature ====
-
-    function renderShotDots(){
-      const dots = document.getElementById('shot-dots');
-      dots.innerHTML = '';
-      const arr = SHOTS_BUFFER[CURRENT_SHOT_CODE] || [];
-      const wrap = document.getElementById('shot-rink');
-      const r = wrap.getBoundingClientRect();
-      arr.forEach(s => {
-        const d = document.createElement('div');
-        d.className = 'absolute rounded-full';
-        d.style.width = '10px'; d.style.height = '10px';
-        d.style.left = `${Math.round(s.x * r.width) - 5}px`;
-        d.style.top  = `${Math.round(s.y * r.height) - 5}px`;
-        d.style.background = s.result === 'goal' ? '#ef4444' : '#1f2937';
-        dots.appendChild(d);
-      });
-    }
-    document.getElementById('shot-rink').addEventListener('click', (ev) => {
-      if (!CURRENT_SHOT_CODE) return;
-      const rect = ev.currentTarget.getBoundingClientRect();
-      const x = (ev.clientX - rect.left) / rect.width;
-      const y = (ev.clientY - rect.top)  / rect.height;
-      const period  = parseInt(document.getElementById('shot-period').value, 10) || 1;
-      const timeSec = mmssToSec(document.getElementById('shot-time').value || '00:00');
-      const result  = document.getElementById('shot-result').value || 'save';
-      SHOTS_BUFFER[CURRENT_SHOT_CODE] ||= [];
-      SHOTS_BUFFER[CURRENT_SHOT_CODE].push({ x, y, period, time_sec: timeSec, result });
-      updateShotBadge(CURRENT_SHOT_CODE);
-      renderShotDots();
-    });
-    function undoLastShot(){
-      if (!CURRENT_SHOT_CODE) return;
-      (SHOTS_BUFFER[CURRENT_SHOT_CODE] || []).pop();
-      updateShotBadge(CURRENT_SHOT_CODE);
-      renderShotDots();
-    }
-    function clearShotsForCurrent(){
-      if (!CURRENT_SHOT_CODE) return;
-      SHOTS_BUFFER[CURRENT_SHOT_CODE] = [];
-      updateShotBadge(CURRENT_SHOT_CODE);
-      renderShotDots();
+    function closeAuthModal(){
+      $("#auth-modal").classList.add("hidden");
+      $("#auth-modal").classList.remove("flex");
     }
 
-    // ===== DB: shots helpers =====
-    async function dbLoadShotsForMatch(matchId){
-      const { data, error } = await sb
-        .from('shots')
-        .select('id, goalie_id, x, y, result')
-        .eq('team_id', CURRENT_TEAM_ID)
-        .eq('match_id', matchId);
+    async function handleAuth(action){
+      const email = $("#auth-email").value.trim();
+      const password = $("#auth-password").value;
+      const msgEl = $("#auth-msg");
+      msgEl.textContent = "";
+      if (!email || !password){
+        msgEl.textContent = "Fyll i både e-post och lösenord.";
+        return;
+      }
+      try {
+        if (action === "signin"){
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          CURRENT_USER = data.user;
+          closeAuthModal();
+          renderAuth();
+          await initTeams();
+          await refreshAll();
+        } else {
+          const { data, error } = await supabaseClient.auth.signUp({ email, password });
+          if (error) throw error;
+          CURRENT_USER = data.user;
+          msgEl.textContent = "Konto skapat! Du är inloggad.";
+          renderAuth();
+          await initTeams();
+          await refreshAll();
+          setTimeout(closeAuthModal, 800);
+        }
+      } catch(e){
+        console.error(e);
+        msgEl.textContent = e.message || "Kunde inte logga in / skapa konto.";
+      }
+    }
+
+    // ---------- DB helpers ----------
+    async function dbMyTeams(){
+      const { data, error } = await supabaseClient
+        .from("teams")
+        .select("*")
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data || [];
     }
-    async function dbGroupShotStatsByMatch(matches){
-      if (!matches?.length) return new Map();
-      const matchIds = matches.map(m => m.id);
-      const { data, error } = await sb
-        .from('shots')
-        .select('match_id, goalie_id, result')
-        .eq('team_id', CURRENT_TEAM_ID)
-        .in('match_id', matchIds);
-      if (error) { showError('load-shots-per-match', error); return new Map(); }
-      const byMatch = new Map();
-      for (const r of (data || [])) {
-        const m = byMatch.get(r.match_id) || new Map();
-        const cur = m.get(r.goalie_id) || { save:0, goal:0, miss:0, block:0, sog:0, total:0 };
-        const key = String(r.result || '').toLowerCase();
-        if (key in cur) cur[key] += 1; else cur[key] = (cur[key] || 0) + 1;
-        cur.sog   = (cur.save || 0) + (cur.goal || 0);
-        cur.total = cur.sog + (cur.miss || 0) + (cur.block || 0);
-        m.set(r.goalie_id, cur);
-        byMatch.set(r.match_id, m);
-      }
-      return byMatch;
-    }
-    async function dbLoadManualStatsByMatch(matches){
-      if (!matches?.length) return new Map();
-      const matchIds = matches.map(m => m.id);
-      const { data, error } = await sb
-        .from('match_goalie_stats')
-        .select('match_id, goalie_id, minutes, saves, shots')
-        .eq('team_id', CURRENT_TEAM_ID)
-        .in('match_id', matchIds);
-      if (error) { showError('load-manual-stats', error); return new Map(); }
-      const byMatch = new Map();
-      for (const r of (data || [])) {
-        const m = byMatch.get(r.match_id) || new Map();
-        m.set(r.goalie_id, { minutes: r.minutes|0, saves: r.saves|0, shots: r.shots|0 });
-        byMatch.set(r.match_id, m);
-      }
-      return byMatch;
-    }
-
-    async function dbInsertShots(matchId){
-      if (!CURRENT_TEAM_ID) throw new Error('Saknar CURRENT_TEAM_ID vid skottinsert');
-      if (!matchId) throw new Error('Saknar matchId vid skottinsert');
-      const { data: gData, error: gErr } = await sb
-        .from('goalies').select('id,code').eq('team_id', CURRENT_TEAM_ID);
-      if (gErr) throw gErr;
-      const idByCode = Object.fromEntries((gData||[]).map(g => [normCode(g.code), g.id]));
-      const rows = [];
-      for (const [codeRaw, shots] of Object.entries(SHOTS_BUFFER)){
-        const gid = idByCode[normCode(codeRaw)];
-        if (!gid) continue;
-        (shots||[]).forEach(s => rows.push({
-          team_id:  CURRENT_TEAM_ID,
-          match_id: matchId,
-          goalie_id: gid,
-          x: s.x, y: s.y, period: s.period || 1, time_sec: s.time_sec || 0, result: s.result || 'save'
-        }));
-      }
-      if (!rows.length){
-        const box = document.getElementById('app-msg');
-        if (box) box.textContent = '[shots] Inga buffrade skott att spara.';
-        return 0;
-      }
-      const { data: insData, error: insErr } = await sb.from('shots').insert(rows).select('id');
-      if (insErr) { showError('insert-shots', insErr); throw insErr; }
-      const inserted = (insData || []).length;
-      const box = document.getElementById('app-msg');
-      if (box) box.textContent = `[shots] Sparade ${inserted}/${rows.length} skott till matchen.`;
-      // töm buffert + badges
-      for (const k of Object.keys(SHOTS_BUFFER)) SHOTS_BUFFER[k] = [];
-      (GOALIES||[]).forEach(g => updateShotBadge(g.code));
-      return inserted;
-    }
-
-    // ===== Felvisning =====
-    function showError(where, err){
-      console.error(where, err);
-      const msg = (err && (err.message || err.details || err.hint)) || String(err);
-      const box = $('#app-msg') || $('#auth-msg') || $('#team-msg');
-      if (box) box.textContent = `[${where}] ${msg}`;
-    }
-
-    // ===== Auth =====
-    const whoami = $('#whoami');
-    const authForms = $('#auth-forms');
-    const btnSignOut = $('#btn-signout');
-
-    $('#btn-signup').addEventListener('click', async () => {
-      $('#auth-msg').textContent = '';
-      try {
-        const { error } = await sb.auth.signUp({ email: $('#email').value.trim(), password: $('#password').value });
-        if (error) throw error;
-        $('#auth-msg').textContent = 'Konto skapat. Logga in om du inte redan är inloggad.';
-      } catch (e) { showError('signup', e); }
-    });
-
-    $('#btn-signin').addEventListener('click', async () => {
-      $('#auth-msg').textContent = '';
-      try {
-        const { error } = await sb.auth.signInWithPassword({
-          email: $('#email').value.trim(),
-          password: $('#password').value
-        });
-        if (error) throw error;
-        await boot();
-      } catch (e) { showError('signin', e); }
-    });
-
-    btnSignOut.addEventListener('click', async () => { await sb.auth.signOut(); });
-
-    async function getSessionSafe(timeoutMs = 2000){
-      const timeout = new Promise((_, rej) => setTimeout(()=>rej(new Error('getSession timeout')), timeoutMs));
-      try {
-        const res = await Promise.race([sb.auth.getSession(), timeout]);
-        if (res?.data?.session) return res.data.session;
-      } catch {}
-      const userRes = await sb.auth.getUser();
-      if (userRes?.data?.user){
-        const s = await sb.auth.getSession();
-        return s?.data?.session ?? null;
-      }
-      return null;
-    }
-
-    let CURRENT_UID = null;
-    let CURRENT_TEAM_ID = null;
-
-    async function boot(){
-      try {
-        const session = await getSessionSafe();
-        if (session?.user?.id){
-          CURRENT_UID = session.user.id;
-          whoami.textContent = `Inloggad som ${session.user.email}`;
-          whoami.classList.remove('hidden');
-          btnSignOut.classList.remove('hidden');
-          authForms.classList.add('hidden');
-          $('#app').classList.remove('hidden');
-          $('#team-bar').classList.remove('hidden');
-          await initTeams();
-          await initApp();
-        } else {
-          CURRENT_UID = null; CURRENT_TEAM_ID = null;
-          whoami.classList.add('hidden');
-          btnSignOut.classList.add('hidden');
-          authForms.classList.remove('hidden');
-          $('#app').classList.add('hidden');
-          $('#team-bar').classList.add('hidden');
-        }
-      } catch (e){ showError('boot', e); }
-    }
-    sb.auth.onAuthStateChange((_ev, session) => { CURRENT_UID = session?.user?.id || null; boot(); });
-    boot();
-
-    // ===== Team-API =====
-    async function dbMyTeams(){
-      const { data, error } = await sb
-        .from('team_members')
-        .select('team_id, role, teams:team_id ( id, name, owner_id )')
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      return (data||[]).map(r => ({ id: r.teams.id, name: r.teams.name, role: r.role, owner_id: r.teams.owner_id }));
-    }
     async function dbCreateTeam(name){
-      const { data: t, error: te } = await sb
-        .from('teams')
-        .insert([{ name, owner_id: CURRENT_UID }])
-        .select('id, name, owner_id')
+      const { data, error } = await supabaseClient
+        .from("teams")
+        .insert([{ name }])
+        .select()
         .single();
-      if (te) throw te;
-      const { data:{ user } } = await sb.auth.getUser();
-      const { error: me } = await sb
-        .from('team_members')
-        .insert([{ team_id: t.id, user_id: user.id, role: 'owner' }]);
-      if (me && me.code !== '23505') throw me;
-      return t;
+      if (error) throw error;
+      return data;
     }
-    async function dbInvite(email, team_id){
-      const { data, error } = await sb.from('team_invites').insert([{ team_id, email }]).select('id, email, status, created_at').single();
-      if (error) throw error; return data;
+    async function dbGoalies(teamId){
+      const { data, error } = await supabaseClient
+        .from("goalies")
+        .select("*")
+        .eq("team_id", teamId)
+        .order("code", { ascending: true });
+      if (error) throw error;
+      return data || [];
     }
-    async function dbMyInvites(){
-      const { data, error } = await sb
-        .from('team_invites')
-        .select('id, team_id, email, status, created_at, teams:team_id (name)')
-        .eq('status','pending')
-        .order('created_at',{ascending:false});
-      if (error) throw error; return data || [];
+    async function dbMatches(teamId, fromDate, toDate){
+      let q = supabaseClient
+        .from("matches")
+        .select("*")
+        .eq("team_id", teamId)
+        .order("date", { ascending: false })
+        .order("id", { ascending: false });
+      if (fromDate) q = q.gte("date", fromDate);
+      if (toDate)   q = q.lte("date", toDate);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
     }
-    async function dbAcceptInvite(invite_id){
-      const { data: inv, error: e1 } = await sb.from('team_invites').select('id, team_id, email, status').eq('id', invite_id).single();
-      if (e1) throw e1;
-      const { data:{ user } } = await sb.auth.getUser();
-      const { error: e2 } = await sb.from('team_members').insert([{ team_id: inv.team_id, user_id: user.id, role: 'member' }]);
-      if (e2 && e2.code !== '23505') throw e2;
-      const { error: e3 } = await sb.from('team_invites').update({ status:'accepted' }).eq('id', invite_id);
-      if (e3) throw e3;
-      return true;
+    async function dbCreateGoalie(teamId, code, name){
+      const { data, error } = await supabaseClient
+        .from("goalies")
+        .insert([{ team_id: teamId, code, name }])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
     }
+    async function dbCreateMatch(teamId, payload){
+      const { data, error } = await supabaseClient
+        .from("matches")
+        .insert([{ team_id: teamId, ...payload }])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+    async function dbUpdateMatch(id, payload){
+      const { error } = await supabaseClient
+        .from("matches")
+        .update(payload)
+        .eq("id", id);
+      if (error) throw error;
+    }
+    async function dbDeleteMatch(id){
+      const { error } = await supabaseClient
+        .from("matches")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    }
+
+    async function dbLoadShotsForMatch(matchId){
+      const { data, error } = await supabaseClient
+        .from("shots")
+        .select("*")
+        .eq("match_id", matchId);
+      if (error) throw error;
+      return data || [];
+    }
+    async function dbAddShot(shot){
+      const { data, error } = await supabaseClient
+        .from("shots")
+        .insert([shot])
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    }
+
+    // ---------- Teams init ----------
     async function initTeams(){
-      const bar = $('#team-bar'); const sel = $('#team-select'); const msg = $('#team-msg');
-      bar.classList.add('hidden'); msg.textContent='';
-      let teams = await dbMyTeams();
-      teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
-      if (!teams.length){ const t = await dbCreateTeam('Mitt Team'); teams = await dbMyTeams(); CURRENT_TEAM_ID = t.id; }
-      if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
-      sel.innerHTML = '';
-      teams.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id; opt.textContent = `${t.name}${t.role==='owner'?' (ägare)':''}`;
-        if (t.id === CURRENT_TEAM_ID) opt.selected = true; sel.appendChild(opt);
-      });
-      sel.onchange = async () => { CURRENT_TEAM_ID = sel.value; try { await refreshAll(); } catch(e){ showError('team-switch', e); } };
-      $('#btn-new-team').onclick = async () => {
-        const name = prompt('Teamnamn:')?.trim(); if (!name) return;
-        try { const t = await dbCreateTeam(name); CURRENT_TEAM_ID = t.id; await initTeams(); await refreshAll(); }
-        catch(e){ showError('new-team', e); }
-      };
-      $('#btn-invite').onclick = async () => {
-        msg.textContent=''; const email = $('#invite-email').value.trim(); if (!email) return;
-        try { await dbInvite(email, CURRENT_TEAM_ID); msg.textContent = `Inbjudan skickad till ${email}.`; $('#invite-email').value=''; }
-        catch(e){ showError('invite', e); }
-      };
-      const panel = $('#invites-panel'); const invites = await dbMyInvites();
-      if (invites.length){
-        panel.classList.remove('hidden');
-        panel.innerHTML = invites.map(i => `
-          <div class="flex items-center justify-between py-1">
-            <div>Inbjuden till <b>${i.teams?.name || 'Team'}</b> (${i.email})</div>
-            <button data-acc="${i.id}" class="rounded-xl border px-3 py-1 text-sm">Acceptera</button>
-          </div>`).join('');
-        panel.querySelectorAll('button[data-acc]').forEach(btn => {
-          btn.onclick = async () => {
-            try { await dbAcceptInvite(btn.dataset.acc); panel.innerHTML = 'Inbjudan accepterad.'; await initTeams(); await refreshAll(); }
-            catch(e){ showError('accept-invite', e); }
-          };
-        });
-      } else { panel.classList.add('hidden'); panel.innerHTML=''; }
-      bar.classList.remove('hidden');
-    }
-
-    // ===== DB: goalies & matches =====
-    async function dbEnsureDefaultGoalies(){
-      const { data, error } = await sb.from('goalies').select('code').eq('team_id', CURRENT_TEAM_ID);
-      if (error) throw error;
-      const have = new Set((data || []).map(g => normCode(g.code)));
-      const wanted = [
-        { code:'LL', name:'Leo L' }, { code:'IE', name:'Isac E' },
-        { code:'EH', name:'Emil H' }, { code:'LK', name:'Leo K' },
-      ];
-      const missing = wanted
-        .map(g => ({ code: normCode(g.code), name: g.name }))
-        .filter(g => !have.has(g.code))
-        .map(g => ({ ...g, team_id: CURRENT_TEAM_ID }));
-      if (missing.length){
-        const { error: insErr } = await sb.from('goalies')
-          .upsert(missing, { onConflict: 'team_id,code', ignoreDuplicates: true });
-        if (insErr) throw insErr;
-      }
-    }
-    async function dbLoadGoalies(){
-      const { data, error } = await sb.from('goalies')
-        .select('id,code,name').eq('team_id', CURRENT_TEAM_ID).order('code');
-      if (error) throw error;
-      return (data || []).map(g => ({ ...g, code: normCode(g.code) }));
-    }
-    async function dbAddGoalie(code, name){
-      const CODE = normCode(code);
-      const up = await sb.from('goalies')
-        .upsert({ team_id: CURRENT_TEAM_ID, code: CODE, name },
-                { onConflict: 'team_id,code', ignoreDuplicates: true })
-        .select('id').maybeSingle();
-      if (up.error && up.error.code !== '23505') throw up.error;
-      if (up.data?.id) return up.data.id;
-      const ex = await sb.from('goalies').select('id').eq('team_id', CURRENT_TEAM_ID).eq('code', CODE).single();
-      if (ex.error) throw ex.error;
-      return ex.data.id;
-    }
-    async function dbAddMatch({ date, opponent, result, notes, entries }) {
-      const { data: mData, error: mErr } = await sb
-        .from('matches')
-        .insert([{ team_id: CURRENT_TEAM_ID, date, opponent, result, notes }])
-        .select('id')
-        .single();
-      if (mErr) throw mErr;
-      const matchId = mData.id;
-
-      const filled = (entries || [])
-        .map(e => ({ ...e, code: normCode(e.code) }))
-        .filter(e => (e.minutes|0) + (e.saves|0) + (e.shots|0) > 0);
-
-      if (filled.length){
-        const readMap = async () => {
-          const { data: gData, error } = await sb.from('goalies').select('id, code').eq('team_id', CURRENT_TEAM_ID);
-          if (error) throw error;
-          return Object.fromEntries((gData || []).map(g => [normCode(g.code), g.id]));
-        };
-        let idByCode = await readMap();
-        const nameByCode = Object.fromEntries((GOALIES || []).map(g => [normCode(g.code), g.name]));
-        const missing = [...new Set(filled.filter(e => !idByCode[e.code]).map(e => e.code))];
-        for (const code of missing){ await dbAddGoalie(code, nameByCode[code] || code); }
-        idByCode = await readMap();
-        const rows = filled.map(e => {
-          const gid = idByCode[e.code];
-          if (!gid) throw new Error(`Okänd målvaktkod: ${e.code}`);
-          return { team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: gid,
-                   minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0 };
-        });
-        const { error: sErr } = await sb.from('match_goalie_stats').insert(rows);
-        if (sErr) throw sErr;
-      }
-
-      await dbInsertShots(matchId);
-      return matchId;
-    }
-    async function dbListMatches(){
-      const { data, error } = await sb
-        .from('matches')
-        .select(`
-          id, date, opponent, result, notes,
-          match_goalie_stats (
-            minutes, saves, shots, goalie_id,
-            goalies:goalie_id ( code, name )
-          )
-        `)
-        .eq('team_id', CURRENT_TEAM_ID)
-        .order('date',{ascending:false});
-      if (error) throw error;
-      return (data||[]).map(m => ({
-        id: m.id, date: m.date, opponent: m.opponent, result: m.result, notes: m.notes,
-        entries: (m.match_goalie_stats||[]).map(e => ({
-          code: e.goalies.code, name: e.goalies.name, minutes: e.minutes, saves: e.saves, shots: e.shots
-        }))
-      }));
-    }
-    async function dbDeleteMatch(matchId){
-      if (!matchId) throw new Error('matchId saknas');
-      const { error } = await sb.from('matches').delete().eq('id', matchId).eq('team_id', CURRENT_TEAM_ID);
-      if (error) throw error;
-      if (window.__shots_cache) window.__shots_cache.delete(matchId);
-      const box = document.getElementById('app-msg'); if (box) box.textContent = 'Match borttagen.';
-    }
-
-    // ===== Export / Import =====
-    function download(filename, content, mime){
-      const blob = new Blob([content], { type: (mime || 'text/plain') + ';charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-    }
-    async function exportJSON(){
-      const goalies = await dbLoadGoalies();
-      const matches = await dbListMatches();
-      const payload = { exported_at: new Date().toISOString(), team_id: CURRENT_TEAM_ID, goalies, matches };
-      download('mv_export.json', JSON.stringify(payload, null, 2), 'application/json');
-    }
-    function escCSV(v){ const s = String(v ?? ''); return /[;"\n]/.test(s) ? '"' + s.replaceAll('"','""') + '"' : s; }
-    function buildCSV(goalies, matches){
-      const head = ['date','opponent','result', ...goalies.flatMap(g => [`${g.code}_minutes`, `${g.code}_saves`, `${g.code}_shots`]), 'notes'];
-      const lines = [head.join(';')];
-      for (const m of matches){
-        const map = Object.fromEntries((m.entries || []).map(e => [e.code, e]));
-        const cols = [
-          `"${m.date}"`, escCSV(m.opponent || ''), m.result,
-          ...goalies.flatMap(g => { const e = map[g.code] || {}; return [e.minutes ?? '', e.saves ?? '', e.shots ?? '']; }),
-          escCSV(m.notes || '')
-        ];
-        lines.push(cols.join(';'));
-      }
-      return lines.join('\r\n');
-    }
-    async function exportCSV(){
-      const goalies = await dbLoadGoalies();
-      const matches = await dbListMatches();
-      const csv = buildCSV(goalies, matches);
-      const BOM = '\uFEFF'; // rätt å/ä/ö i Excel
-      download('mv_export.csv', BOM + csv, 'text/csv');
-    }
-    function bindExportButtons(){
-      const j = $('#btn-exp-json'), c = $('#btn-exp-csv');
-      if (j && !j._bound){ j.addEventListener('click', ()=>exportJSON().catch(e=>showError('export-json', e))); j._bound=true; }
-      if (c && !c._bound){ c.addEventListener('click', ()=>exportCSV().catch(e=>showError('export-csv', e)));   c._bound=true; }
-    }
-
-    // ---- Import helpers ----
-    async function dbGetGoalieMapEnsure(codesAndNames){
-      const { data: gData, error } = await sb.from('goalies').select('id,code,name').eq('team_id', CURRENT_TEAM_ID);
-      if (error) throw error;
-      const have = new Map((gData || []).map(g => [normCode(g.code), g]));
-      const missing = (codesAndNames || [])
-        .map(x => ({ code: normCode(x.code), name: x.name }))
-        .filter(x => x.code && !have.has(x.code));
-      if (missing.length){
-        const rows = missing.map(x => ({ team_id: CURRENT_TEAM_ID, code: x.code, name: x.name || x.code }));
-        const { data: ins, error: e2 } = await sb.from('goalies').insert(rows).select('id,code,name');
-        if (e2) throw e2;
-        (ins || []).forEach(g => have.set(normCode(g.code), g));
-      }
-      return Object.fromEntries([...have.entries()].map(([code,g]) => [code, g.id]));
-    }
-    async function dbFindOrCreateMatchByKey({ date, opponent, result, notes }){
-      let { data: found, error: sErr } = await sb
-        .from('matches').select('id')
-        .eq('team_id', CURRENT_TEAM_ID).eq('date', date).eq('opponent', opponent || '').limit(1).maybeSingle();
-      if (sErr && sErr.code !== 'PGRST116') throw sErr;
-      if (found?.id){ await sb.from('matches').update({ result, notes }).eq('id', found.id); return found.id; }
-      const { data: ins, error } = await sb
-        .from('matches').insert([{ team_id: CURRENT_TEAM_ID, date, opponent: opponent||'', result, notes }])
-        .select('id').single();
-      if (error) throw error; return ins.id;
-    }
-    async function importJSONFile(file){
-      const text = await file.text(); const obj = JSON.parse(text);
-      const idByCode = await dbGetGoalieMapEnsure((obj.goalies||[]).map(g => ({code:g.code, name:g.name})));
-      for (const m of (obj.matches || [])){
-        const matchId = await dbFindOrCreateMatchByKey({ date: m.date, opponent: m.opponent||'', result: m.result||'V', notes: m.notes||'' });
-        await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
-        const rows = (m.entries||[]).map(e => ({
-          team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: idByCode[e.code],
-          minutes: e.minutes|0, saves: e.saves|0, shots: e.shots|0
-        }));
-        if (rows.length){ const { error } = await sb.from('match_goalie_stats').insert(rows); if (error) throw error; }
-      }
-    }
-    function parseCSVLine(line){
-      const out=[]; let cur=''; let inQ=false;
-      for (let i=0;i<line.length;i++){
-        const ch=line[i];
-        if (inQ){
-          if (ch === '"'){ if (line[i+1] === '"'){ cur+='"'; i++; } else { inQ=false; } }
-          else cur += ch;
-        } else {
-          if (ch === '"') inQ=true;
-          else if (ch === ';'){ out.push(cur); cur=''; }
-          else cur += ch;
-        }
-      }
-      out.push(cur); return out;
-    }
-    async function importCSVFile(file){
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      if (lines.length < 2) throw new Error('CSV saknar data.');
-      const header = lines[0].split(';').map(h=>h.trim());
-      const idx = Object.fromEntries(header.map((h,i)=>[h,i]));
-      const codes = [];
-      for (const h of header){
-        const m = h.match(/^([A-Za-z0-9]+)_(minutes|saves|shots)$/);
-        if (m && !codes.includes(m[1])) codes.push(m[1]);
-      }
-      const idByCode = await dbGetGoalieMapEnsure(codes.map(code => ({code, name: code})));
-      for (let li=1; li<lines.length; li++){
-        const cols = parseCSVLine(lines[li]);
-        const date = cols[idx['date']] || today();
-        const opponent = cols[idx['opponent']] || '';
-        const result = cols[idx['result']] || 'V';
-        const notes  = cols[idx['notes']] || '';
-        const matchId = await dbFindOrCreateMatchByKey({ date, opponent, result, notes });
-        const rows = codes.map(code => ({
-          team_id: CURRENT_TEAM_ID, match_id: matchId, goalie_id: idByCode[code],
-          minutes: Number(cols[idx[`${code}_minutes`]]||0)||0,
-          saves:   Number(cols[idx[`${code}_saves`]]||0)||0,
-          shots:   Number(cols[idx[`${code}_shots`]]||0)||0
-        }));
-        await sb.from('match_goalie_stats').delete().eq('match_id', matchId);
-        const { error } = await sb.from('match_goalie_stats').insert(rows);
-        if (error) throw error;
-      }
-    }
-
-    // ===== App state & UI =====
-    let GOALIES = [];
-    let formResult = 'V';
-
-    async function initApp(){
-      $('#f-date').value = today();
-
-      document.querySelectorAll('.resbtn').forEach(btn => {
-        btn.classList.remove('border-black');
-        if (btn.dataset.res === 'V') btn.classList.add('border-black');
-        btn.onclick = () => {
-          formResult = btn.dataset.res;
-          document.querySelectorAll('.resbtn').forEach(b => b.classList.remove('border-black'));
-          btn.classList.add('border-black');
-        };
-      });
-
+      if (!CURRENT_USER) return;
+      const sel = $("#team-select");
+      sel.innerHTML = "<option>Laddar...</option>";
       try {
-        await dbEnsureDefaultGoalies();
-        GOALIES = await dbLoadGoalies();
-        renderGoalieInputs();
-        bindExportButtons();
-        await refreshAll();
-      } catch (e){ showError('initApp', e); }
-
-      $('#reset-entries').onclick = () => {
-        GOALIES.forEach(g => { $('#m-'+g.code).value='0'; $('#s-'+g.code).value='0'; $('#t-'+g.code).value='0'; });
-      };
-      $('#btn-add-goalie').onclick = async () => {
-        const code = normCode(prompt('Kod (t.ex. LL):') || '');
-        const name = (prompt('Namn (t.ex. Leo L):') || '').trim();
-        if (!code || !name) return;
-        try { await dbAddGoalie(code, name); GOALIES = await dbLoadGoalies(); renderGoalieInputs(); }
-        catch (e) { showError('add-goalie', e); }
-      };
-      $('#add-match').onclick = async () => {
-        $('#app-msg').textContent = '';
-        const entries = GOALIES.map(g => ({
-          code: g.code,
-          minutes: num($('#m-'+g.code).value),
-          saves:   num($('#s-'+g.code).value),
-          shots:   num($('#t-'+g.code).value),
-        }));
-        try {
-          await dbAddMatch({ date: $('#f-date').value || today(), opponent: $('#f-opp').value || '',
-                             result: formResult, notes: $('#f-notes').value || '', entries });
-          document.querySelectorAll('#goalie-grid input').forEach(i => i.value='0');
-          $('#f-opp').value=''; $('#f-notes').value='';
-          await refreshAll();
-        } catch (e){ showError('add-match', e); }
-      };
-
-      // Import-bindningar
-      const impJ = $('#imp-json'), impC = $('#imp-csv');
-      if (impJ && !impJ._bound){
-        impJ.addEventListener('change', async (e)=>{
-          $('#app-msg').textContent=''; try {
-            const f = e.target.files?.[0]; if (!f) return;
-            await importJSONFile(f); await refreshAll();
-          } catch (err){ showError('import-json', err); } finally { e.target.value=''; }
-        }); impJ._bound=true;
-      }
-      if (impC && !impC._bound){
-        impC.addEventListener('change', async (e)=>{
-          $('#app-msg').textContent=''; try {
-            const f = e.target.files?.[0]; if (!f) return;
-            await importCSVFile(f); await refreshAll();
-          } catch (err){ showError('import-csv', err); } finally { e.target.value=''; }
-        }); impC._bound=true;
-      }
-    }
-
-    function renderGoalieInputs(){
-      const grid = $('#goalie-grid'); grid.innerHTML = '';
-      GOALIES.forEach(g => {
-        const row = document.createElement('div');
-        row.className = 'grid grid-cols-12 items-center gap-2';
-        row.innerHTML = `
-          <div class="col-span-4">
-            <div class="font-medium text-sm">${g.name}</div>
-            <div class="text-xs text-gray-500">${g.code}</div>
-          </div>
-          <input id="m-${g.code}" inputmode="numeric" class="col-span-2 rounded-xl border p-2 text-center" placeholder="min" value="0" />
-          <input id="s-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="räddn" value="0" />
-          <input id="t-${g.code}" inputmode="numeric" class="col-span-3 rounded-xl border p-2 text-center" placeholder="skott" value="0" />
-          <span class="inline-flex items-center gap-1 text-xs">
-            <span id="shot-count-${g.code}" class="rounded-lg border px-2 py-0.5">0 skott</span>
-            <button type="button" id="btn-shot-${g.code}" class="rounded-lg border px-2 py-0.5">+ Skott</button>
-          </span>
-        `;
-        grid.appendChild(row);
-        SHOTS_BUFFER[g.code] ||= [];
-        row.querySelector(`#btn-shot-${g.code}`).addEventListener('click', () => openShotModal(g.code));
-        updateShotBadge(g.code);
-      });
-    }
-
-    // ===== Graf: Rädd% över tid =====
-    let svpctChart = null;
-    const pctNum = (saves, shots) => shots > 0 ? +(((saves / shots) * 100).toFixed(2)) : null;
-    const movingAvg = (arr, window=3) => {
-      const out = [];
-      for (let i=0;i<arr.length;i++){
-        const slice = arr.slice(Math.max(0, i-window+1), i+1).filter(v => v != null);
-        out.push(slice.length ? +(slice.reduce((a,b)=>a+b,0)/slice.length).toFixed(2) : null);
-      }
-      return out;
-    };
-    function updateChartSelect(){
-      const sel = document.getElementById('chart-goalie'); if (!sel) return;
-      const current = sel.value; sel.innerHTML = '';
-      (GOALIES || []).forEach(g => { const opt = document.createElement('option'); opt.value = g.code; opt.textContent = `${g.name} (${g.code})`; sel.appendChild(opt); });
-      if (current && [...sel.options].some(o => o.value === current)) sel.value = current;
-      else if (GOALIES?.[0]) sel.value = GOALIES[0].code;
-    }
-    function renderSavePctChart(matches){
-      const sel = document.getElementById('chart-goalie');
-      const canvas = document.getElementById('svpctChart');
-      const msg = document.getElementById('chart-empty');
-      if (!sel || !canvas) return;
-      const code = (sel.value || (GOALIES?.[0]?.code) || '').toUpperCase();
-      const sorted = [...(matches || [])].sort((a,b)=>a.date.localeCompare(b.date));
-      const labels = [], values = [];
-      sorted.forEach(m => {
-        const e = (m.entries || []).find(x => (x.code || '').toUpperCase() === code);
-        if (e && (e.saves != null) && (e.shots != null)){ labels.push(m.date); values.push(pctNum(e.saves, e.shots)); }
-      });
-      const hasData = values.some(v => v != null); msg?.classList.toggle('hidden', hasData);
-      if (svpctChart){ svpctChart.destroy(); svpctChart = null; } if (!hasData) return;
-      const ma = movingAvg(values, 3);
-      svpctChart = new Chart(canvas.getContext('2d'), {
-        type: 'line',
-        data: { labels, datasets: [
-          { label: `Rädd% (${code})`, data: values, spanGaps: true, tension: 0.3, pointRadius: 3 },
-          { label: '3-matchers snitt', data: ma, spanGaps: true, borderDash: [6,4], tension: 0.3, pointRadius: 0 }
-        ]},
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: { y: { suggestedMin: 60, suggestedMax: 100, ticks: { callback: v => v + '%' } }, x: { ticks: { autoSkip: true, maxRotation: 0 } } },
-          plugins: { legend: { position: 'bottom' },
-            tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y?.toFixed?.(2) ?? '–'}%` } } }
+        let teams = await dbMyTeams();
+        teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+        if (!teams.length){
+          const t = await dbCreateTeam("Mitt Team");
+          teams = await dbMyTeams();
+          CURRENT_TEAM_ID = t.id;
         }
-      });
-    }
-    document.addEventListener('change', (e)=>{ if (e.target && e.target.id === 'chart-goalie'){ renderSavePctChart(window.__LATEST_MATCHES__ || []); } });
+        if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
 
-    // ===== Skottkarta renderers =====
-    function renderShotMap(containerEl, shots, goalieById, goalieFilter='ALL'){
-      containerEl.innerHTML = '';
-      const W = containerEl.clientWidth || 360, H = Math.round(W * 0.6), pad = 8;
-      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
-      svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', '100%'); svg.setAttribute('height', H);
-      const bg = document.createElementNS(svg.namespaceURI, 'rect');
-      bg.setAttribute('x', 0); bg.setAttribute('y', 0); bg.setAttribute('width', W); bg.setAttribute('height', H);
-      bg.setAttribute('fill', 'white'); bg.setAttribute('rx', 18); bg.setAttribute('ry', 18); bg.setAttribute('stroke', '#d1d5db'); svg.appendChild(bg);
-      const cl = document.createElementNS(svg.namespaceURI, 'line');
-      cl.setAttribute('x1', W/2); cl.setAttribute('x2', W/2); cl.setAttribute('y1', 0); cl.setAttribute('y2', H);
-      cl.setAttribute('stroke', '#ef4444'); cl.setAttribute('stroke-width', '2'); svg.appendChild(cl);
-      const l1 = document.createElementNS(svg.namespaceURI, 'line');
-      l1.setAttribute('x1', pad*2); l1.setAttribute('x2', pad*2); l1.setAttribute('y1', pad); l1.setAttribute('y2', H-pad);
-      l1.setAttribute('stroke', '#60a5fa'); l1.setAttribute('stroke-width', '2'); svg.appendChild(l1);
-      const l2 = document.createElementNS(svg.namespaceURI, 'line');
-      l2.setAttribute('x1', W - pad*2); l2.setAttribute('x2', W - pad*2); l2.setAttribute('y1', pad); l2.setAttribute('y2', H - pad);
-      l2.setAttribute('stroke', '#60a5fa'); l2.setAttribute('stroke-width', '2'); svg.appendChild(l2);
-      const drawX = (x, y, size, color) => { const g = document.createElementNS(svg.namespaceURI, 'g');
-        const lA = document.createElementNS(svg.namespaceURI, 'line'); const lB = document.createElementNS(svg.namespaceURI, 'line');
-        lA.setAttribute('x1', x-size); lA.setAttribute('y1', y-size); lA.setAttribute('x2', x+size); lA.setAttribute('y2', y+size);
-        lB.setAttribute('x1', x-size); lB.setAttribute('y1', y+size); lB.setAttribute('x2', x+size); lB.setAttribute('y2', y-size);
-        [lA,lB].forEach(l => { l.setAttribute('stroke', color); l.setAttribute('stroke-width','2'); l.setAttribute('stroke-linecap','round'); });
-        g.appendChild(lA); g.appendChild(lB); svg.appendChild(g); };
-      const drawCircle = (x, y, r, color, fill=false) => { const c = document.createElementNS(svg.namespaceURI, 'circle');
-        c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
-        c.setAttribute('stroke', color); c.setAttribute('stroke-width', '2');
-        c.setAttribute('fill', fill ? color : 'none'); c.setAttribute('fill-opacity', fill ? '0.15' : '0'); svg.appendChild(c); };
-      const drawSquare = (x, y, size, color) => { const s = document.createElementNS(svg.namespaceURI, 'rect');
-        s.setAttribute('x', x-size); s.setAttribute('y', y-size); s.setAttribute('width', size*2); s.setAttribute('height', size*2);
-        s.setAttribute('stroke', color); s.setAttribute('stroke-width','2'); s.setAttribute('fill','none'); svg.appendChild(s); };
-      const filtered = shots.filter(s => goalieFilter === 'ALL' || s.goalie_id === goalieFilter);
+        sel.innerHTML = "";
+        teams.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t.id;
+          opt.textContent = `${t.name}${t.role === "owner" ? " (ägare)" : ""}`;
+          if (t.id === CURRENT_TEAM_ID) opt.selected = true;
+          sel.appendChild(opt);
+        });
+
+        sel.onchange = async () => {
+          CURRENT_TEAM_ID = sel.value;
+          try {
+            await refreshAll();
+          } catch(e){ showError("team-switch", e); }
+        };
+        $("#btn-new-team").onclick = async () => {
+          const name = prompt("Teamnamn:")?.trim();
+          if (!name) return;
+          try {
+            const t = await dbCreateTeam(name);
+            CURRENT_TEAM_ID = t.id;
+            await initTeams();
+            await refreshAll();
+          } catch(e){ showError("new-team", e); }
+        };
+      } catch(e){
+        showError("init-teams", e);
+      }
+    }
+
+    // ---------- Filter ----------
+    function getFilterRange(){
+      const f = $("#filter-from").value || null;
+      const t = $("#filter-to").value || null;
+      return { from: f, to: t };
+    }
+
+    // ---------- Shot map / heatmap helpers ----------
+    function renderShotMap(rinkEl, shots, goalieById, filterGoalieId){
+      rinkEl.innerHTML = "";
+      const w = rinkEl.clientWidth || 360;
+      const h = rinkEl.clientHeight || 180;
+      const pad = 8;
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      svg.setAttribute("width", "100%");
+      svg.setAttribute("height", "100%");
+      svg.classList.add("rounded-xl");
+
+      const rect = document.createElementNS(svgNS, "rect");
+      rect.setAttribute("x", 0);
+      rect.setAttribute("y", 0);
+      rect.setAttribute("width", w);
+      rect.setAttribute("height", h);
+      rect.setAttribute("rx", 10);
+      rect.setAttribute("ry", 10);
+      rect.setAttribute("fill", "#f8fafc");
+      rect.setAttribute("stroke", "#e5e7eb");
+      svg.appendChild(rect);
+
+      const center = document.createElementNS(svgNS, "line");
+      center.setAttribute("x1", w/2);
+      center.setAttribute("y1", 0);
+      center.setAttribute("x2", w/2);
+      center.setAttribute("y2", h);
+      center.setAttribute("stroke", "#e11d48");
+      center.setAttribute("stroke-width", 1.5);
+      svg.appendChild(center);
+
+      const goalL = document.createElementNS(svgNS, "rect");
+      goalL.setAttribute("x", 0);
+      goalL.setAttribute("y", h*0.35);
+      goalL.setAttribute("width", 6);
+      goalL.setAttribute("height", h*0.3);
+      goalL.setAttribute("fill", "#fee2e2");
+      svg.appendChild(goalL);
+
+      const goalR = document.createElementNS(svgNS, "rect");
+      goalR.setAttribute("x", w-6);
+      goalR.setAttribute("y", h*0.35);
+      goalR.setAttribute("width", 6);
+      goalR.setAttribute("height", h*0.3);
+      goalR.setAttribute("fill", "#fee2e2");
+      svg.appendChild(goalR);
+
+      const filtered = shots.filter(s => {
+        if (filterGoalieId && filterGoalieId !== "ALL" && s.goalie_id !== filterGoalieId) return false;
+        return true;
+      });
+
       for (const s of filtered){
-        const x = pad + (W - pad*2) * (Number(s.x) || 0);
-        const y = pad + (H - pad*2) * (Number(s.y) || 0);
-        const base = String((s.result||'')).toLowerCase().split('|')[0];
-        switch (base){
-          case 'goal':  drawX(x, y, 6, '#ef4444'); break;
-          case 'save':  drawCircle(x, y, 5, '#10b981', true); break;
-          case 'block': drawSquare(x, y, 5, '#3b82f6'); break;
-          case 'miss':
-          default:      drawCircle(x, y, 5, '#6b7280', false); break;
-        }
+        const cx = pad + (w - 2*pad) * (s.x ?? 0.5);
+        const cy = pad + (h - 2*pad) * (s.y ?? 0.5);
+        const circle = document.createElementNS(svgNS, "circle");
+        circle.setAttribute("cx", cx);
+        circle.setAttribute("cy", cy);
+        circle.setAttribute("r", 4);
+        let color = "#0f766e"; // default save
+        const r = String(s.result || "").toLowerCase();
+        if (r.startsWith("goal")) color = "#ef4444";
+        else if (r.startsWith("miss")) color = "#6b7280";
+        else if (r.startsWith("post")) color = "#f97316";
+        circle.setAttribute("fill", color);
+        circle.setAttribute("fill-opacity", 0.85);
+        svg.appendChild(circle);
       }
-      containerEl.appendChild(svg);
+
+      rinkEl.appendChild(svg);
     }
-    function renderShotLegend(legendEl, shots, goalieFilter='ALL'){
-      const counts = { save:0, goal:0, miss:0, block:0 }
-    // ==== xG & Heatmap helpers ====
-    function computeShotXG(W, H, pad, sx, sy){
-      const x = pad + (W - pad*2) * (Number(sx) || 0);
-      const y = pad + (H - pad*2) * (Number(sy) || 0);
-      const goalLeft = {x: pad, y: H/2};
-      const goalRight= {x: W - pad, y: H/2};
-      const dL = Math.hypot(goalLeft.x - x, goalLeft.y - y);
-      const dR = Math.hypot(goalRight.x - x, goalRight.y - y);
-      const goal = dL < dR ? goalLeft : goalRight;
-      const dist = Math.max(1, Math.hypot(goal.x - x, goal.y - y)); // pixels
-      const ang = Math.abs(Math.atan2(y - goal.y, goal.x - x)); // 0 = rakt fram
-      // Heuristisk logistic: justerade koeff för rimliga 0.02–0.45 xG spann
-      const a = 2.2, b = -0.02, c = -1.2;
-      const z = a + b*dist + c*ang;
-      const xg = 1 / (1 + Math.exp(-z));
-      return xg;
-    }
-    function drawHeatmap(canvas, W, H, pad, shots){
-      const ctx = canvas.getContext('2d');
-      const w = canvas.width  = W;
-      const h = canvas.height = H;
-      ctx.clearRect(0,0,w,h);
-      const grid = 40, gh = 17;
-      const cellW = (W - pad*2) / grid;
-      const cellH = (H - pad*2) / gh;
-      const acc = Array.from({length: gh}, () => Array(grid).fill(0));
-      shots.forEach(s=>{
-        const x = pad + (W - pad*2) * (Number(s.x)||0);
-        const y = pad + (H - pad*2) * (Number(s.y)||0);
-        const cx = Math.min(grid-1, Math.max(0, Math.floor((x - pad)/cellW)));
-        const cy = Math.min(gh-1,   Math.max(0, Math.floor((y - pad)/cellH)));
-        acc[cy][cx] += 1;
+
+    function renderShotLegend(el, shots, filterGoalieId){
+      const filtered = shots.filter(s => {
+        if (filterGoalieId && filterGoalieId !== "ALL" && s.goalie_id !== filterGoalieId) return false;
+        return true;
       });
-      let maxV = 0; acc.forEach(r=>r.forEach(v=>{ if(v>maxV) maxV=v; }));
-      if (maxV<=0) return;
-      for (let cy=0; cy<gh; cy++){
-        for (let cx=0; cx<grid; cx++){
-          const v = acc[cy][cx] / maxV;
-          const alpha = Math.pow(v, 0.6) * 0.6;
-          if (alpha <= 0) continue;
-          ctx.fillStyle = 'rgba(255,0,0,'+alpha.toFixed(3)+')';
-          ctx.fillRect(Math.round(pad + cx*cellW), Math.round(pad + cy*cellH), Math.ceil(cellW), Math.ceil(cellH));
-        }
-      }
-    }
-;
-      for (const s of shots){
-        if (goalieFilter !== 'ALL' && s.goalie_id !== goalieFilter) continue;
-        const k = String((s.result||'')).toLowerCase().split('|')[0]; if (k in counts) counts[k] += 1;
-      }
-      legendEl.innerHTML = `Räddn: ${counts.save} • Mål: ${counts.goal} • Miss: ${counts.miss} • Block: ${counts.block}`;
+      const total = filtered.length;
+      const goals = filtered.filter(s => String(s.result || "").toLowerCase().startsWith("goal")).length;
+      const saves = filtered.filter(s => String(s.result || "").toLowerCase().startsWith("save")).length;
+      const miss  = filtered.filter(s => String(s.result || "").toLowerCase().startsWith("miss")).length;
+      const post  = filtered.filter(s => String(s.result || "").toLowerCase().startsWith("post")).length;
+
+      el.innerHTML = `
+        <div class="flex flex-wrap gap-3">
+          <div class="flex items-center gap-1 text-xs"><span class="inline-block w-3 h-3 rounded-full bg-red-500"></span> Mål: ${goals}</div>
+          <div class="flex items-center gap-1 text-xs"><span class="inline-block w-3 h-3 rounded-full bg-teal-700"></span> Räddn: ${saves}</div>
+          <div class="flex items-center gap-1 text-xs"><span class="inline-block w-3 h-3 rounded-full bg-gray-500"></span> Miss: ${miss}</div>
+          <div class="flex items-center gap-1 text-xs"><span class="inline-block w-3 h-3 rounded-full bg-orange-500"></span> Ribba/Stolpe: ${post}</div>
+          <div class="text-xs text-slate-500 ml-auto">Totalt: ${total}</div>
+        </div>
+      `;
     }
 
-    // ===== Matchlista (med summa + skottkarta + delete) =====
-    function renderMatchList(matches, mapsObj = {}){
-      const { shotStatsByMatch = new Map(), manualStatsByMatch = new Map() } = mapsObj;
-      const wrap = document.getElementById('match-list'); wrap.innerHTML = '';
-      const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
+    function computeShotXG(w, h, pad, xNorm, yNorm){
+      const x = pad + (w - 2*pad)*(xNorm ?? 0.5);
+      const y = pad + (h - 2*pad)*(yNorm ?? 0.5);
+      const goalX = w - pad;
+      const goalY = h / 2;
+      const dx = goalX - x;
+      const dy = goalY - y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const dNorm = Math.min(Math.max(dist / 300, 0), 1);
+      const base = 0.35;
+      const xg = base * (1 - dNorm);
+      return Math.max(0.01, Math.min(0.6, xg));
+    }
 
-      for (const m of matches){
-        const card = document.createElement('div'); card.className = 'rounded-2xl border p-4 mb-4';
-        const hdr = `
-          <div class="flex items-center justify-between mb-2">
-            <div>
-              <div class="text-sm text-gray-500">${m.date} • ${m.result || ''}</div>
-              <div class="font-medium">${m.opponent || 'Motstånd saknas'}</div>
-            </div>
-            <div class="flex items-center gap-3"><button class="text-sm underline" data-edit-match="${m.id}">Redigera</button><a href="#" data-del="${m.id}" class="text-sm underline">Ta bort</a></div>
-          </div>`;
-        const sMap = shotStatsByMatch.get(m.id)  || new Map();
-        const gMap = manualStatsByMatch.get(m.id) || new Map();
-        const unionIds = new Set([...sMap.keys(), ...gMap.keys()]);
-        let rowsHtml = '';
-        let totMin = 0, totSaves = 0, totGoals = 0;
+    function drawHeatmap(cvs, W, H, pad, shots){
+      const ctx = cvs.getContext("2d");
+      cvs.width = W;
+      cvs.height = H;
+      ctx.clearRect(0, 0, W, H);
 
-        if (unionIds.size){
-          for (const gid of unionIds){
-            const g  = goalieById.get(gid) || {};
-            const ev = sMap.get(gid) || null;
-            const ms = gMap.get(gid) || null;
+      const sigma = 40;
+      const twoSigmaSq = 2 * sigma * sigma;
 
-            const minutes = Number(ms?.minutes ?? 0);
-            const mSaves  = Number(ms?.saves ?? 0);
-            const mShots  = Number(ms?.shots ?? 0);
+      const pts = shots.map(s => ({
+        x: pad + (W - 2*pad)*(s.x ?? 0.5),
+        y: pad + (H - 2*pad)*(s.y ?? 0.5),
+        w: String(s.result || "").toLowerCase().startsWith("goal") ? 1.4 : 1.0
+      }));
 
-            let saves, goals, sog;
-            if (ev){ saves = Number(ev.save||0); goals = Number(ev.goal||0); sog = Number(ev.sog||(saves+goals)); }
-            else { saves = mSaves; goals = Math.max(0, mShots - mSaves); sog = Math.max(0, mShots); }
+      const img = ctx.createImageData(W, H);
+      const data = img.data;
 
-            totMin += minutes; totSaves += saves; totGoals += goals;
-
-            const name = g.name || 'Okänd målvakt', code = g.code || '';
-            rowsHtml += `
-              <div class="grid grid-cols-12 text-sm py-1">
-                <div class="col-span-6">${name} <span class="text-gray-500">(${code})</span></div>
-                <div class="col-span-2 text-center">${minutes || '–'}</div>
-                <div class="col-span-2 text-center">${saves}</div>
-                <div class="col-span-2 text-center font-medium">
-                  ${sog}${goals ? `<span class="ml-1 text-xs text-red-600">(${goals} mål)</span>` : ''}
-                </div>
-              </div>`;
+      for (let y=0; y<H; y++){
+        for (let x=0; x<W; x++){
+          let val = 0;
+          for (const p of pts){
+            const dx = x - p.x;
+            const dy = y - p.y;
+            const d2 = dx*dx + dy*dy;
+            const contrib = Math.exp(-d2 / twoSigmaSq) * p.w;
+            val += contrib;
           }
-          const totSOG = totSaves + totGoals;
-          rowsHtml += `
-            <div class="grid grid-cols-12 text-sm py-1 border-t mt-1 pt-1 font-medium">
-              <div class="col-span-6 text-right">Summa</div>
-              <div class="col-span-2 text-center">${totMin || '–'}</div>
-              <div class="col-span-2 text-center">${totSaves}</div>
-              <div class="col-span-2 text-center">${totSOG}${totGoals ? `<span class="ml-1 text-xs text-red-600">(${totGoals} mål)</span>` : ''}</div>
-            </div>`;
-        } else {
-          rowsHtml = `<div class="text-sm text-gray-500">Inga skott registrerade.</div>`;
+          const idxPix = (y*W + x)*4;
+          const c = Math.min(val*80, 255);
+          data[idxPix + 0] = c;
+          data[idxPix + 1] = Math.max(0, c - 60);
+          data[idxPix + 2] = 0;
+          data[idxPix + 3] = Math.min(200, c + 30);
         }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    // ---------- UI: refresh ----------
+    async function refreshAll(){
+      if (!CURRENT_TEAM_ID) return;
+      const { from, to } = getFilterRange();
+      try {
+        GOALIES = await dbGoalies(CURRENT_TEAM_ID);
+        const matches = await dbMatches(CURRENT_TEAM_ID, from, to);
+        renderGoalies(GOALIES, matches);
+        renderMatches(matches, GOALIES);
+        renderSummaries(matches, GOALIES);
+      } catch(e){
+        showError("refreshAll", e);
+      }
+    }
+
+    function renderSummaries(matches, goalies){
+      const totalMatches = matches.length;
+      $("#summary-matches").textContent = fmtInt(totalMatches);
+
+      const v = matches.filter(m => m.result === "V").length;
+      const o = matches.filter(m => m.result === "O").length;
+      const f = matches.filter(m => m.result === "F").length;
+      $("#summary-result").textContent = `${v} / ${o} / ${f}`;
+
+      let totalShots = 0;
+      let totalGoals = 0;
+      goalies.forEach(g => {
+        const stats = matches
+          .map(m => tryParseMatchStats(m, g.id))
+          .filter(Boolean);
+        stats.forEach(s => {
+          totalShots += (s.shots || 0);
+          totalGoals += (s.goals || 0);
+        });
+      });
+      $("#summary-shots").textContent = fmtInt(totalShots);
+      $("#summary-goals").textContent = fmtInt(totalGoals);
+
+      const goalieStats = goalies.map(g => {
+        const stats = matches
+          .map(m => tryParseMatchStats(m, g.id))
+          .filter(Boolean);
+        const sh = stats.reduce((a,s) => a+(s.shots||0), 0);
+        const gl = stats.reduce((a,s) => a+(s.goals||0), 0);
+        return { g, sh, gl };
+      }).filter(x => x.sh > 0);
+
+      const svArr = goalieStats.map(x => (x.sh - x.gl)/x.sh);
+      let avg = null;
+      if (svArr.length){
+        avg = svArr.reduce((a,s)=>a+s,0) / svArr.length;
+      }
+      $("#summary-svpct").textContent = avg == null ? "–" : (avg*100).toFixed(1).replace(".", ",") + " %";
+
+      $("#summary-goalies").textContent = fmtInt(goalieStats.length);
+    }
+
+    function tryParseMatchStats(match, goalieId){
+      if (!match || !match.stats_json) return null;
+      try {
+        const obj = JSON.parse(match.stats_json);
+        if (!obj || !obj[goalieId]) return null;
+        return obj[goalieId];
+      } catch(e){
+        return null;
+      }
+    }
+
+    function renderGoalies(goalies, matches){
+      const wrap = $("#goalies-wrap");
+      const empty = $("#goalies-empty");
+      wrap.innerHTML = "";
+      if (!goalies.length){
+        empty.classList.remove("hidden");
+        return;
+      }
+      empty.classList.add("hidden");
+
+      goalies.forEach(g => {
+        const stats = matches
+          .map(m => tryParseMatchStats(m, g.id))
+          .filter(Boolean);
+        const shots = stats.reduce((a,s)=>a+(s.shots||0),0);
+        const goals = stats.reduce((a,s)=>a+(s.goals||0),0);
+        const minutes = stats.reduce((a,s)=>a+(s.minutes||0),0);
+        const saves = shots - goals;
+        const sv = shots>0 ? saves/shots : null;
+
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-2xl p-3 shadow-sm";
+
+        const title = document.createElement("div");
+        title.className = "flex items-center justify-between mb-2";
+        title.innerHTML = `
+          <div>
+            <div class="text-sm font-semibold">${g.name || "(namn saknas)"}</div>
+            <div class="text-xs text-slate-500">Kod: ${g.code || "-"}</div>
+          </div>
+        `;
+        card.appendChild(title);
+
+        const rows = document.createElement("div");
+        rows.className = "grid grid-cols-4 gap-2 text-xs mt-1";
+        rows.innerHTML = `
+          <div class="rounded-xl border p-2">
+            <div class="text-[11px] text-slate-500">Matcher</div>
+            <div class="font-semibold">${stats.length}</div>
+          </div>
+          <div class="rounded-xl border p-2">
+            <div class="text-[11px] text-slate-500">Räddnings-%</div>
+            <div class="font-semibold">${fmtPct(sv)}</div>
+          </div>
+          <div class="rounded-xl border p-2">
+            <div class="text-[11px] text-slate-500">Skott</div>
+            <div class="font-semibold">${fmtInt(shots)}</div>
+          </div>
+          <div class="rounded-xl border p-2">
+            <div class="text-[11px] text-slate-500">Minuter</div>
+            <div class="font-semibold">${fmtInt(minutes)}</div>
+          </div>
+        `;
+        card.appendChild(rows);
+
+        const footer = document.createElement("div");
+        footer.className = "mt-3 flex justify-end";
+        footer.innerHTML = `
+          <a href="goalie.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}&code=${encodeURIComponent(g.code)}"
+             class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">Detaljer</a>
+        `;
+        card.appendChild(footer);
+
+        wrap.appendChild(card);
+      });
+    }
+
+    function renderMatches(matches, goalies){
+      const wrap = $("#matches-wrap");
+      const empty = $("#matches-empty");
+      wrap.innerHTML = "";
+      if (!matches.length){
+        empty.classList.remove("hidden");
+        return;
+      }
+      empty.classList.add("hidden");
+
+      matches.forEach(m => {
+        const card = document.createElement("div");
+        card.className = "bg-white rounded-2xl p-3 shadow-sm";
+
+        const hdr = `
+          <div class="flex items-center justify-between mb-1">
+            <div>
+              <div class="text-sm font-semibold">${fmtDate(m.date)} – ${m.opponent || "Motståndare?"}</div>
+              <div class="text-xs text-slate-500">
+                Resultat: ${m.our_goals ?? "-"} – ${m.their_goals ?? "-"} ${m.result ? "(" + m.result + ")" : ""}
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-xs">
+              <button class="underline" data-edit="${m.id}">Redigera</button>
+              <button class="underline text-red-600" data-del="${m.id}">Ta bort</button>
+            </div>
+          </div>
+        `;
+
+        const statsObj = {};
+        if (m.stats_json){
+          try { Object.assign(statsObj, JSON.parse(m.stats_json)); } catch(e){}
+        }
+        const rows = [];
+        for (const g of goalies){
+          const s = statsObj[g.id] || {};
+          const shots = s.shots || 0;
+          const goals = s.goals || 0;
+          const saves = shots - goals;
+          const sv = shots>0 ? saves/shots : null;
+          const min = s.minutes || 0;
+          rows.push({ g, shots, goals, saves, sv, min });
+        }
+        const rowsHtml = rows.map(r => `
+          <div class="grid grid-cols-12 gap-1 text-xs py-1 border-b last:border-b-0">
+            <div class="col-span-6">${r.g.name || r.g.code || "(målvakt)"}</div>
+            <div class="col-span-2 text-center">${fmtTimeMin(r.min)}</div>
+            <div class="col-span-2 text-center">${fmtPct(r.sv)}</div>
+            <div class="col-span-2 text-center">${fmtInt(r.shots)}</div>
+          </div>
+        `).join("");
 
         card.innerHTML = hdr + `
           <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
@@ -1268,7 +903,9 @@ document.addEventListener('click', (e) => {
           </div>
           <div id="shots-wrap-${m.id}" class="hidden mt-2">
             <div class="flex items-center gap-2 mb-2">
-              <label class="flex items-center gap-1 text-xs"><input type="checkbox" data-heatmap="${m.id}"> Heatmap</label>
+              <label class="flex items-center gap-1 text-xs">
+                <input type="checkbox" data-heatmap="${m.id}"> Heatmap
+              </label>
               <span class="text-xs">xG: <b id="xg-${m.id}">–</b></span>
               <label class="text-xs">Målvakt:</label>
               <select id="shots-filter-${m.id}" class="border rounded px-2 py-1 text-sm"></select>
@@ -1278,186 +915,552 @@ document.addEventListener('click', (e) => {
               <canvas id="heat-${m.id}" class="absolute inset-0 w-full h-48 pointer-events-none hidden"></canvas>
             </div>
             <div id="legend-${m.id}" class="mt-2 text-xs text-gray-600"></div>
-          </div>`;
+          </div>
+        `;
         wrap.appendChild(card);
-      }
+      });
 
-      // Shots toggle + rendering (once)
+      // Skottkarta toggle + laddning (once)
       if (!wrap.__hasShotsHandler__){
-        wrap.addEventListener('click', async (e) => {
-          const tgl = e.target.closest('[data-shots-toggle]'); if (!tgl) return;
-          e.preventDefault();
-          const matchId = tgl.dataset.shotsToggle;
-          const panel   = document.getElementById(`shots-wrap-${matchId}`);
-          const rinkEl  = document.getElementById(`rink-${matchId}`);
-          const selEl   = document.getElementById(`shots-filter-${matchId}`);
-          const legendEl= document.getElementById(`legend-${matchId}`);
-          panel.classList.toggle('hidden');
+        wrap.addEventListener("click", async (e) => {
+          const btn = e.target.closest("[data-shots-toggle]");
+          if (!btn) return;
+          const matchId = btn.dataset.shotsToggle;
+          const panel = document.getElementById("shots-wrap-"+matchId);
+          if (!panel) return;
+          panel.classList.toggle("hidden");
+          if (panel.classList.contains("hidden")) return;
+
+          const rinkEl = document.getElementById("rink-"+matchId);
+          const selEl = document.getElementById("shots-filter-"+matchId);
+          const legendEl = document.getElementById("legend-"+matchId);
+          if (!rinkEl || !selEl || !legendEl) return;
 
           window.__shots_cache = window.__shots_cache || new Map();
           let shots = __shots_cache.get(matchId);
           if (!shots){
-            try { shots = await dbLoadShotsForMatch(matchId); __shots_cache.set(matchId, shots); }
-            catch (err) { showError('load-shots-match', err); return; }
+            try {
+              shots = await dbLoadShotsForMatch(matchId);
+              __shots_cache.set(matchId, shots);
+            } catch(err){
+              showError("load-shots-match", err);
+              return;
+            }
           }
           const gids = [...new Set(shots.map(s => s.goalie_id))];
           const goalieById = new Map((GOALIES || []).map(g => [g.id, g]));
           selEl.innerHTML = `<option value="ALL">Alla målvakter</option>` +
             gids.map(gid => {
               const g = goalieById.get(gid);
-              const label = g ? `${g.name} (${g.code})` : 'Okänd målvakt';
+              const label = g ? `${g.name} (${g.code})` : "Okänd målvakt";
               return `<option value="${gid}">${label}</option>`;
-            }).join('');
-          
-          selEl.onchange = draw;
-          const heatChk = document.querySelector('[data-heatmap="'+matchId+'"]'); if (heatChk) heatChk.onchange = draw;
-const draw = () => {
-            const filter = selEl.value || 'ALL';
+            }).join("");
+
+          // ---- FIX: definiera draw INNAN den används ----
+          const draw = () => {
+            const filter = selEl.value || "ALL";
             renderShotMap(rinkEl, shots, goalieById, filter);
             renderShotLegend(legendEl, shots, filter);
+
             // xG
-            const W = rinkEl.clientWidth || 360, H = Math.round(W*0.6), pad=8;
-            const filtered = shots.filter(s => filter==='ALL' || s.goalie_id===filter);
-            const xgSum = filtered.filter(s=>String((s.result||'')).toLowerCase().startsWith('goal') || String((s.result||'')).toLowerCase().startsWith('save'))
+            const W = rinkEl.clientWidth || 360;
+            const H = Math.round(W*0.6);
+            const pad = 8;
+            const filtered = shots.filter(s => filter === "ALL" || s.goalie_id === filter);
+            const xgSum = filtered
+              .filter(s => {
+                const r = String(s.result || "").toLowerCase();
+                return r.startsWith("goal") || r.startsWith("save");
+              })
               .reduce((a,s)=>a+computeShotXG(W,H,pad,s.x,s.y),0);
-            const xgEl = document.getElementById('xg-'+matchId); if (xgEl) xgEl.textContent = xgSum.toFixed(2);
+            const xgEl = document.getElementById("xg-"+matchId);
+            if (xgEl) xgEl.textContent = xgSum.toFixed(2);
+
             // heatmap
             const chk = document.querySelector('[data-heatmap="'+matchId+'"]');
-            const cvs = document.getElementById('heat-'+matchId);
+            const cvs = document.getElementById("heat-"+matchId);
             if (chk && cvs){
-              cvs.classList.toggle('hidden', !chk.checked);
+              cvs.classList.toggle("hidden", !chk.checked);
               if (chk.checked) drawHeatmap(cvs, W, H, pad, filtered);
             }
           };
+
+          // event handlers efter att draw är definierad
+          selEl.onchange = draw;
+          const heatChk = document.querySelector('[data-heatmap="'+matchId+'"]');
+          if (heatChk) heatChk.onchange = draw;
+
+          // rita första gången
           draw();
-          if (!selEl.__hasHandler){ selEl.addEventListener('change', draw); selEl.__hasHandler = true; }
+
+          if (!selEl.__hasHandler){
+            selEl.addEventListener("change", draw);
+            selEl.__hasHandler = true;
+          }
         });
         wrap.__hasShotsHandler__ = true;
       }
 
       // Delete (once)
       if (!wrap.__hasDeleteHandler__){
-        wrap.addEventListener('click', async (e) => {
-          const a = e.target.closest('[data-del]'); if (!a) return;
+        wrap.addEventListener("click", async (e) => {
+          const a = e.target.closest("[data-del]");
+          if (!a) return;
           e.preventDefault();
-          const matchId = a.dataset.del; if (!matchId) return;
-          if (!confirm('Ta bort matchen? Detta tar även bort skott kopplade till matchen.')) return;
-          try { await dbDeleteMatch(matchId); await refreshAll(); }
-          catch (err) { showError('delete-match', err); }
+          const matchId = a.dataset.del;
+          if (!matchId) return;
+          if (!confirm("Ta bort den här matchen?")) return;
+          try {
+            await dbDeleteMatch(matchId);
+            await refreshAll();
+          } catch(err){
+            showError("delete-match", err);
+          }
         });
         wrap.__hasDeleteHandler__ = true;
       }
+
+      // Edit (once)
+      if (!wrap.__hasEditHandler__){
+        wrap.addEventListener("click", async (e) => {
+          const btn = e.target.closest("[data-edit]");
+          if (!btn) return;
+          const matchId = btn.dataset.edit;
+          if (!matchId) return;
+          try {
+            await openEditModal(matchId);
+          } catch(err){
+            showError("open-edit", err);
+          }
+        });
+        wrap.__hasEditHandler__ = true;
+      }
     }
 
-    // ===== Cards & summeringar =====
-    function renderCards(matches){
-      const wrap = $('#cards'); wrap.innerHTML='';
-      GOALIES.forEach(g => {
-        const all = matches.flatMap(m => m.entries.filter(e => e.code === g.code));
-        const minutes = sum(all.map(e => e.minutes));
-        const saves   = sum(all.map(e => e.saves));
-        const shots   = sum(all.map(e => e.shots));
-        const card = document.createElement('div');
-        card.className = 'rounded-2xl border shadow-sm p-3 bg-white';
-        card.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-sm text-gray-500">Målvakt</div>
-              <div class="text-lg font-semibold">${g.name} <span class="text-sm text-gray-500">(${g.code})</span></div>
-            </div>
-            <div class="text-right">
-              <div class="text-sm text-gray-500">Rädd%</div>
-              <div class="text-xl font-bold">${pct(saves, shots)}</div>
-            </div>
+    // ---------- Ny målvakt / ny match ----------
+    async function createNewGoalie(){
+      if (!CURRENT_TEAM_ID) return;
+      const code = prompt("Målvaktskod (t.ex. #30):")?.trim();
+      if (!code) return;
+      const name = prompt("Namn (valfritt):")?.trim() || "";
+      try {
+        await dbCreateGoalie(CURRENT_TEAM_ID, code, name);
+        await refreshAll();
+      } catch(e){ showError("create-goalie", e); }
+    }
+
+    async function createNewMatch(){
+      if (!CURRENT_TEAM_ID) return;
+      const d = prompt("Datum (YYYY-MM-DD):", new Date().toISOString().slice(0,10))?.trim();
+      if (!d) return;
+      const opp = prompt("Motståndare:")?.trim() || "";
+      const ourG = Number(prompt("Våra mål:", "0") || "0");
+      const theirG = Number(prompt("Deras mål:", "0") || "0");
+      let result = "";
+      if (!Number.isNaN(ourG) && !Number.isNaN(theirG)){
+        if (ourG > theirG) result = "V";
+        else if (ourG < theirG) result = "F";
+        else result = "O";
+      }
+      try {
+        await dbCreateMatch(CURRENT_TEAM_ID, {
+          date: d,
+          opponent: opp,
+          our_goals: ourG,
+          their_goals: theirG,
+          result
+        });
+        await refreshAll();
+      } catch(e){ showError("create-match", e); }
+    }
+
+    // ---------- Edit modal ----------
+    let EDIT_MATCH_ID = null;
+    let EDIT_ENTRIES = [];
+    let EDIT_SHOT_BUF = {};
+
+    async function openEditModal(matchId){
+      EDIT_MATCH_ID = matchId;
+      const { data: match, error } = await supabaseClient
+        .from("matches")
+        .select("*")
+        .eq("id", matchId)
+        .single();
+      if (error) throw error;
+      const statsObj = {};
+      if (match.stats_json){
+        try { Object.assign(statsObj, JSON.parse(match.stats_json)); } catch(e){}
+      }
+      EDIT_ENTRIES = GOALIES.map(g => {
+        const s = statsObj[g.id] || {};
+        return {
+          goalie_id: g.id,
+          name: g.name || g.code || "(målvakt)",
+          code: g.code || "",
+          minutes: s.minutes || 0,
+          shots: s.shots || 0,
+          goals: s.goals || 0
+        };
+      });
+
+      const body = $("#edit-body");
+      body.innerHTML = "";
+
+      const meta = document.createElement("div");
+      meta.className = "mb-3 text-sm";
+      meta.innerHTML = `
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">Datum</label>
+            <input id="edit-date" type="date" class="border rounded px-2 py-1 w-full text-sm" value="${match.date || ""}">
           </div>
-          <div class="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
-            <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Minuter</div><div class="font-semibold">${minutes}</div></div>
-            <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Räddningar</div><div class="font-semibold">${saves}</div></div>
-            <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Skott</div><div class="font-semibold">${shots}</div></div>
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">Motståndare</label>
+            <input id="edit-opp" type="text" class="border rounded px-2 py-1 w-full text-sm" value="${match.opponent || ""}">
           </div>
-          <div class="mt-3 flex justify-end">
-            <a href="goalie.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}&code=${encodeURIComponent(g.code)}"
-              class="px-3 py-1 rounded-xl border text-sm hover:bg-gray-50">Detaljer</a>
-          </div>`;
-        wrap.appendChild(card);
+        </div>
+        <div class="flex gap-2 mt-2">
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">Våra mål</label>
+            <input id="edit-our" type="number" class="border rounded px-2 py-1 w-full text-sm" value="${match.our_goals ?? ""}">
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs text-gray-500 mb-1">Deras mål</label>
+            <input id="edit-their" type="number" class="border rounded px-2 py-1 w-full text-sm" value="${match.their_goals ?? ""}">
+          </div>
+        </div>
+      `;
+      body.appendChild(meta);
+
+      const tbl = document.createElement("div");
+      tbl.className = "mt-3 border-t pt-2";
+      tbl.innerHTML = `
+        <div class="grid grid-cols-5 gap-1 text-xs text-gray-500 mb-1">
+          <div>Målvakt</div>
+          <div class="text-center">Min</div>
+          <div class="text-center">Skott</div>
+          <div class="text-center">Mål</div>
+          <div class="text-center">Rädd%</div>
+        </div>
+      `;
+      EDIT_ENTRIES.forEach((e, idx) => {
+        const row = document.createElement("div");
+        row.className = "grid grid-cols-5 gap-1 items-center mb-1 text-xs";
+        row.innerHTML = `
+          <div>${e.name}</div>
+          <div><input type="number" step="0.1" class="border rounded px-1 py-0.5 w-full text-xs" data-field="minutes" data-idx="${idx}" value="${e.minutes}"></div>
+          <div><input type="number" class="border rounded px-1 py-0.5 w-full text-xs" data-field="shots" data-idx="${idx}" value="${e.shots}"></div>
+          <div><input type="number" class="border rounded px-1 py-0.5 w-full text-xs" data-field="goals" data-idx="${idx}" value="${e.goals}"></div>
+          <div class="text-center" data-field="sv-${idx}"></div>
+        `;
+        tbl.appendChild(row);
+      });
+      body.appendChild(tbl);
+
+      function recalc(){
+        EDIT_ENTRIES.forEach((e, idx) => {
+          const s = e.shots || 0;
+          const g = e.goals || 0;
+          const el = body.querySelector(`[data-field="sv-${idx}"]`);
+          if (!el) return;
+          if (s>0){
+            const sv = (s-g)/s;
+            el.textContent = fmtPct(sv);
+          } else {
+            el.textContent = "–";
+          }
+        });
+      }
+      recalc();
+
+      body.addEventListener("input", e => {
+        const inp = e.target;
+        const field = inp.dataset.field;
+        const idx = Number(inp.dataset.idx);
+        if (!field || Number.isNaN(idx)) return;
+        let v = parseFloat(inp.value);
+        if (Number.isNaN(v)) v = 0;
+        EDIT_ENTRIES[idx][field] = v;
+        recalc();
+      }, { once: true });
+
+      EDIT_SHOT_BUF = {};
+      const shotBtn = document.createElement("div");
+      shotBtn.className = "mt-3";
+      shotBtn.innerHTML = `
+        <button type="button" class="px-3 py-1.5 text-xs rounded-xl border hover:bg-slate-50" data-editshots="${matchId}">
+          Lägg / redigera skott (skottkarta)
+        </button>
+        <div class="text-[11px] text-gray-500 mt-1">
+          Skottkartan visas i matchlistan. Här kan du lägga skott (x/y) och resultat (mål, räddning, miss, stolpe).
+        </div>
+      `;
+      body.appendChild(shotBtn);
+
+      body.querySelectorAll("[data-editshots]").forEach(btn=>{
+        btn.onclick = () => openEditShots(btn.dataset.editshots);
+      });
+
+      const mm = $("#edit-modal");
+      mm.classList.remove("hidden");
+      mm.classList.add("flex");
+    }
+
+    function closeEditModal(){
+      const mm = $("#edit-modal");
+      mm.classList.add("hidden");
+      mm.classList.remove("flex");
+      EDIT_MATCH_ID = null;
+      EDIT_ENTRIES = [];
+      EDIT_SHOT_BUF = {};
+    }
+
+    async function openEditShots(matchId){
+      alert("Här kan man bygga ett separat gränssnitt för att redigera skott (kommande funktion).");
+    }
+
+    async function saveEditModal(){
+      if (!EDIT_MATCH_ID) return;
+      try {
+        const date = $("#edit-date").value || null;
+        const opp  = $("#edit-opp").value || "";
+        const our  = parseInt($("#edit-our").value || "0", 10);
+        const their= parseInt($("#edit-their").value || "0", 10);
+        let result = "";
+        if (!Number.isNaN(our) && !Number.isNaN(their)){
+          if (our > their) result = "V";
+          else if (our < their) result = "F";
+          else result = "O";
+        }
+        const stats = {};
+        EDIT_ENTRIES.forEach(e => {
+          stats[e.goalie_id] = {
+            minutes: e.minutes || 0,
+            shots: e.shots || 0,
+            goals: e.goals || 0
+          };
+        });
+
+        await dbUpdateMatch(EDIT_MATCH_ID, {
+          date,
+          opponent: opp,
+          our_goals: our,
+          their_goals: their,
+          result,
+          stats_json: JSON.stringify(stats)
+        });
+        closeEditModal();
+        await refreshAll();
+      } catch(e){
+        showError("save-edit", e);
+      }
+    }
+
+    // ---------- Shot modal ----------
+    let CURRENT_SHOT_MATCH = null;
+    let CURRENT_SHOT_GOALIE = null;
+
+    function openShotModal(matchId, goalieId, goalieCode){
+      CURRENT_SHOT_MATCH = matchId;
+      CURRENT_SHOT_GOALIE = goalieId;
+      $("#shot-modal-code").textContent = goalieCode || "";
+      $("#shot-result").value = "save";
+      $("#shot-period").value = "1";
+      $("#shot-time").value = "";
+      $("#shot-dots").innerHTML = "";
+      const mm = $("#shot-modal");
+      mm.classList.remove("hidden");
+      mm.classList.add("flex");
+    }
+    function closeShotModal(){
+      const mm = $("#shot-modal");
+      mm.classList.add("hidden");
+      mm.classList.remove("flex");
+      CURRENT_SHOT_MATCH = null;
+      CURRENT_SHOT_GOALIE = null;
+    }
+
+    async function saveShot(){
+      if (!CURRENT_SHOT_MATCH || !CURRENT_SHOT_GOALIE) return;
+      const res = $("#shot-result").value;
+      const per = $("#shot-period").value;
+      const time = $("#shot-time").value.trim();
+      const dots = $("#shot-dots").querySelectorAll("div[data-x][data-y]");
+      if (!dots.length){
+        alert("Klicka på rinken för att lägga skottposition.");
+        return;
+      }
+      const last = dots[dots.length - 1];
+      const x = parseFloat(last.dataset.x);
+      const y = parseFloat(last.dataset.y);
+      try {
+        await dbAddShot({
+          match_id: CURRENT_SHOT_MATCH,
+          goalie_id: CURRENT_SHOT_GOALIE,
+          result: res,
+          period: per,
+          time,
+          x,
+          y
+        });
+        closeShotModal();
+        window.__shots_cache && window.__shots_cache.delete(CURRENT_SHOT_MATCH);
+      } catch(e){
+        showError("save-shot", e);
+      }
+    }
+
+    function initShotRink(){
+      const rink = $("#shot-rink");
+      rink.addEventListener("click", e => {
+        const rect = rink.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        const dots = $("#shot-dots");
+        const d = document.createElement("div");
+        d.dataset.x = x.toFixed(4);
+        d.dataset.y = y.toFixed(4);
+        d.className = "absolute w-3 h-3 rounded-full bg-red-500 -translate-x-1.5 -translate-y-1.5";
+        d.style.left = (x*100)+"%";
+        d.style.top = (y*100)+"%";
+        dots.appendChild(d);
       });
     }
-    function renderResultSummary(matches){
-      const v = matches.filter(m => m.result === 'V').length;
-      const o = matches.filter(m => m.result === 'O').length;
-      const f = matches.filter(m => m.result === 'F').length;
-      $('#stat-v').textContent = v; $('#stat-o').textContent = o; $('#stat-f').textContent = f;
-      const minutesTotal = GOALIES.map(g => matches.flatMap(m => m.entries.filter(e => e.code===g.code)).reduce((a,e)=>a+e.minutes,0)).reduce((a,b)=>a+b,0);
-      $('#stat-min').textContent = minutesTotal;
-    }
 
-    // ===== REFRESH ALL =====
-    async function refreshAll(){
+    // ---------- Import / Export ----------
+    async function exportJSON(){
+      if (!CURRENT_TEAM_ID){
+        alert("Du måste ha ett lag valt.");
+        return;
+      }
       try {
-        await dbEnsureDefaultGoalies();
-        GOALIES = await dbLoadGoalies();
-        renderGoalieInputs();
-
-        const matches = await dbListMatches();
-        const [shotStatsByMatch, manualStatsByMatch] = await Promise.all([
-          dbGroupShotStatsByMatch(matches),
-          dbLoadManualStatsByMatch(matches)
-        ]);
-
-        renderCards(matches);
-        renderResultSummary(matches);
-        renderMatchList(matches, { shotStatsByMatch, manualStatsByMatch });
-        window.__LATEST_MATCHES__ = matches;
-        updateChartSelect();
-        renderSavePctChart(matches);
-
-        const btnCompare = document.getElementById('btn-compare');
-        if (btnCompare && CURRENT_TEAM_ID) {
-          btnCompare.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
-          btnCompare.target = '_self';
+        const goalies = await dbGoalies(CURRENT_TEAM_ID);
+        const matches = await dbMatches(CURRENT_TEAM_ID);
+        const shotRows = [];
+        for (const m of matches){
+          const s = await dbLoadShotsForMatch(m.id);
+          shotRows.push(...s);
         }
-      } catch (e){ showError('refresh-all', e); }
+        const blob = new Blob([JSON.stringify({
+          team_id: CURRENT_TEAM_ID,
+          goalies,
+          matches,
+          shots: shotRows
+        }, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "mv_export.json";
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch(e){
+        showError("export-json", e);
+      }
     }
+
+    async function importJSONFile(file){
+      try {
+        const text = await file.text();
+        const obj = JSON.parse(text);
+        if (!obj || typeof obj !== "object") throw new Error("Ogiltig JSON.");
+        alert("JSON import – här kan du implementera faktisk import till Supabase.");
+      } catch(e){
+        showError("import-json", e);
+      }
+    }
+
+    function parseCsvLine(line){
+      const out = [];
+      let cur = "";
+      let inQ = false;
+      for (let i=0;i<line.length;i++){
+        const ch = line[i];
+        if (inQ){
+          if (ch === '"'){
+            if (line[i+1] === '"'){ cur+='"'; i++; }
+            else { inQ=false; }
+          } else cur += ch;
+        } else {
+          if (ch === '"') inQ=true;
+          else if (ch === ";"){ out.push(cur); cur=""; }
+          else cur += ch;
+        }
+      }
+      out.push(cur);
+      return out;
+    }
+
+    async function importCSVFile(file){
+      const text = await file.text();
+      const lines = text.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) throw new Error("CSV saknar data.");
+      const header = lines[0].split(";").map(h => h.trim().toLowerCase());
+      const rows = lines.slice(1).map(line => parseCsvLine(line));
+
+      const idxDate = header.indexOf("datum");
+      const idxOpp  = header.indexOf("motstånd");
+      const idxOur  = header.indexOf("våra mål");
+      const idxTheir= header.indexOf("deras mål");
+      if (idxDate<0 || idxOpp<0){
+        throw new Error("CSV måste ha kolumnerna 'Datum' och 'Motstånd'.");
+      }
+
+      alert("CSV import – här kan du implementera faktisk import till Supabase.");
+    }
+
+    // ---------- Tabs / init ----------
+    function initTabs(){
+      const btns = $$(".tab-btn");
+      const panes = $$(".tab-pane");
+      btns.forEach(b => {
+        b.addEventListener("click", () => {
+          const t = b.dataset.tab;
+          btns.forEach(x => x.classList.remove("border-b-2","border-sky-500","text-sky-600"));
+          btns.forEach(x => x.classList.add("text-slate-500"));
+          b.classList.add("border-b-2","border-sky-500","text-sky-600");
+          panes.forEach(p => p.classList.add("hidden"));
+          document.getElementById(t).classList.remove("hidden");
+        });
+      });
+    }
+
+    // ---------- Window onload ----------
+    window.addEventListener("load", async () => {
+      $("#btn-auth").onclick = openAuthModal;
+      $("#auth-signin").onclick = () => handleAuth("signin");
+      $("#auth-signup").onclick = () => handleAuth("signup");
+      $("#btn-new-goalie").onclick = createNewGoalie;
+      $("#btn-new-match").onclick = createNewMatch;
+      $("#btn-export-json").onclick = exportJSON;
+      $("#imp-json").addEventListener("change", e => {
+        const f = e.target.files?.[0];
+        if (f) importJSONFile(f).catch(err => showError("import-json", err));
+        e.target.value = "";
+      });
+      $("#imp-csv").addEventListener("change", e => {
+        const f = e.target.files?.[0];
+        if (f) importCSVFile(f).catch(err => showError("import-csv", err));
+        e.target.value = "";
+      });
+      $("#edit-save").onclick = saveEditModal;
+      $("#shot-save").onclick = saveShot;
+
+      $("#btn-clear-filter").onclick = () => {
+        $("#filter-from").value = "";
+        $("#filter-to").value = "";
+        refreshAll();
+      };
+      $("#filter-from").addEventListener("change", refreshAll);
+      $("#filter-to").addEventListener("change", refreshAll);
+
+      initTabs();
+      initShotRink();
+      await refreshUser();
+      if (CURRENT_USER){
+        await initTeams();
+        await refreshAll();
+      }
+    });
   </script>
-
-<!-- Modal: Redigera match -->
-<div id="edit-modal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
-  <div class="bg-white rounded-2xl p-4 w-full max-w-lg">
-    <div class="flex items-center justify-between mb-2">
-      <div class="font-semibold">Redigera match</div>
-      <button type="button" class="text-sm underline" onclick="closeEditModal()">Stäng</button>
-    </div>
-    <div class="grid gap-2 sm:grid-cols-2">
-      <label class="text-sm">Datum
-        <input id="edit-date" type="date" class="w-full border rounded-xl p-2">
-      </label>
-      <label class="text-sm">Motstånd
-        <input id="edit-opp" type="text" class="w-full border rounded-xl p-2" placeholder="t.ex. Kumla">
-      </label>
-      <label class="text-sm sm:col-span-2">Resultat
-        <select id="edit-res" class="w-full border rounded-xl p-2">
-          <option value="V">Vinst</option><option value="O">Oavgjort</option><option value="F">Förlust</option>
-        </select>
-      </label>
-      <label class="text-sm sm:col-span-2">Kommentar
-        <textarea id="edit-notes" rows="2" class="w-full border rounded-xl p-2"></textarea>
-      </label>
-    </div>
-    <div class="border-t my-3"></div>
-    <div id="edit-goalies" class="space-y-2"></div>
-    <div class="flex items-center justify-between mt-3">
-      <div class="text-xs text-gray-500" id="edit-msg"></div>
-      <div class="flex gap-2">
-        <button type="button" class="rounded-xl border px-3 py-2" onclick="saveEditMatch()">Spara</button>
-        <button type="button" class="rounded-xl border px-3 py-2" onclick="closeEditModal()">Avbryt</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script>
-if ('serviceWorker' in navigator){ navigator.serviceWorker.register('service-worker.js').catch(()=>{}); }
-</script>
-
 </body>
 </html>
