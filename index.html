@@ -1547,6 +1547,77 @@
     });
   }
 
+  <!-- Skottkarta / Skott-editor -->
+  <div id="shot-editor-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between px-6 py-4 border-b">
+        <h2 class="text-lg font-semibold">Skottkarta – redigera skott</h2>
+        <button id="shot-editor-close" class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
+      </div>
+
+      <div class="px-6 pt-4 pb-3 flex flex-wrap gap-4 items-center border-b">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">Målvakt</label>
+          <select id="shot-editor-goalie" class="border rounded px-2 py-1 text-sm">
+            <!-- fylls via JS -->
+          </select>
+        </div>
+
+        <div>
+          <span class="block text-xs text-gray-500 mb-1">Resultat</span>
+          <div class="flex gap-3 text-sm">
+            <label><input type="radio" name="shot-result" value="goal" checked> Mål</label>
+            <label><input type="radio" name="shot-result" value="save"> Räddning</label>
+            <label><input type="radio" name="shot-result" value="miss"> Miss</label>
+            <label><input type="radio" name="shot-result" value="post"> Ribba/stolpe</label>
+          </div>
+        </div>
+
+        <p class="text-xs text-gray-500 flex-1">
+          Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
+          Klick på skott i listan nedan för att ta bort dem.
+        </p>
+      </div>
+
+      <div class="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+        <!-- Själva isen / skottkartan -->
+        <div class="flex-1 flex items-center justify-center">
+          <div class="relative border rounded-xl overflow-hidden bg-sky-50"
+               style="width: 100%; max-width: 900px; aspect-ratio: 2 / 1;">
+            <!-- Rink-bakgrund: kan vara bara en div, du har ev. redan SVG eller canvas -->
+            <canvas id="shot-editor-canvas" class="w-full h-full"></canvas>
+          </div>
+        </div>
+
+        <!-- Lista med skott -->
+        <div class="h-40 overflow-y-auto border rounded-lg">
+          <table class="w-full text-xs">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-2 py-1 text-left">Målvakt</th>
+                <th class="px-2 py-1 text-left">Resultat</th>
+                <th class="px-2 py-1 text-left">X</th>
+                <th class="px-2 py-1 text-left">Y</th>
+                <th class="px-2 py-1"></th>
+              </tr>
+            </thead>
+            <tbody id="shot-editor-list"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t flex justify-end gap-3">
+        <button id="shot-editor-cancel" class="px-4 py-2 text-sm rounded border">
+          Avbryt
+        </button>
+        <button id="shot-editor-save" class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">
+          Spara skott
+        </button>
+      </div>
+    </div>
+  </div>
+
+
   // ---------- Import / Export ----------
   async function exportJSON(){
     if (!CURRENT_TEAM_ID){
