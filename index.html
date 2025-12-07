@@ -663,22 +663,24 @@
 
   // ---------- Teams init ----------
   async function initTeams(){
-    if (!CURRENT_USER) return;
     const sel = $("#team-select");
     sel.innerHTML = "<option>Laddar...</option>";
-    try{
+
+    try {
       let teams = await dbMyTeams();
       // ta bort ev. dubletter
-      teams = teams.filter((t,i,arr)=>arr.findIndex(x=>x.id===t.id)===i);
-      if (!teams.length){
+      teams = teams.filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
+
+      if (!teams.length) {
         const t = await dbCreateTeam("Mitt Team");
         teams = await dbMyTeams();
         CURRENT_TEAM_ID = t.id;
       }
+
       if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
 
       sel.innerHTML = "";
-      teams.forEach(t=>{
+      teams.forEach(t => {
         const opt = document.createElement("option");
         opt.value = t.id;
         opt.textContent = t.name;
@@ -688,23 +690,30 @@
 
       sel.onchange = async () => {
         CURRENT_TEAM_ID = sel.value;
-        try { await refreshAll(); } catch(e){ showError("team-switch",e); }
+        try {
+          await refreshAll();
+        } catch (e) {
+          showError("team-switch", e);
+        }
       };
 
       $("#btn-new-team").onclick = async () => {
         const name = prompt("Teamnamn:")?.trim();
         if (!name) return;
-        try{
+        try {
           const t = await dbCreateTeam(name);
           CURRENT_TEAM_ID = t.id;
           await initTeams();
           await refreshAll();
-        } catch(e){ showError("new-team",e); }
+        } catch (e) {
+          showError("new-team", e);
+        }
       };
-    } catch(e){
-      showError("init-teams",e);
+    } catch (e) {
+      showError("init-teams", e);
     }
   }
+
 
   // ---------- Filter ----------
   function getFilterRange(){
