@@ -864,12 +864,29 @@
   // ---------- UI: refresh ----------
   function buildStatsByMatch(statsRows){
     const map = new Map();
+
     for (const r of statsRows){
+      const shots = r.shots ?? 0;
+      const saves = r.saves ?? 0;
+      let goals   = shots - saves;          // mål = skott – räddningar
+      if (goals < 0) goals = 0;             // safety, om något är felregistrerat
+
+      const row = {
+        match_id : r.match_id,
+        goalie_id: r.goalie_id,
+        minutes  : r.minutes ?? 0,
+        shots,
+        saves,
+        goals    // <- nyckeln som resten av koden använder
+      };
+
       if (!map.has(r.match_id)) map.set(r.match_id, []);
-      map.get(r.match_id).push(r);
+      map.get(r.match_id).push(row);
     }
+
     return map;
   }
+
 
   function getStatForGoalieMatch(statsByMatch, matchId, goalieId){
     const arr = statsByMatch.get(matchId) || [];
