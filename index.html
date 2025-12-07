@@ -654,6 +654,7 @@
     const rows = entries.map(e => ({
       match_id: matchId,
       goalie_id: e.goalie_id,
+      team_id: CURRENT_TEAM_ID,
       minutes: e.minutes || 0,
       shots:   e.shots   || 0,
       goals:   e.goals   || 0
