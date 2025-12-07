@@ -228,7 +228,7 @@
   </main>
 </div>
 
-<!-- Modal: Lägg skott -->
+<!-- Modal: Lägg skott (enklare modal – används vid behov) -->
 <div id="shot-modal"
      class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
   <div class="bg-white rounded-2xl p-4 w-full max-w-md">
@@ -359,6 +359,79 @@
       </div>
     </div>
     <div id="auth-msg" class="text-sm text-red-600 mt-2"></div>
+  </div>
+</div>
+
+<!-- Skottkarta / Skott-editor (ny modal) -->
+<div id="shot-editor-modal"
+     class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b">
+      <h2 class="text-lg font-semibold">Skottkarta – redigera skott</h2>
+      <button id="shot-editor-close"
+              class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
+    </div>
+
+    <div class="px-6 pt-4 pb-3 flex flex-wrap gap-4 items-center border-b">
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Målvakt</label>
+        <select id="shot-editor-goalie" class="border rounded px-2 py-1 text-sm">
+          <!-- fylls via JS -->
+        </select>
+      </div>
+
+      <div>
+        <span class="block text-xs text-gray-500 mb-1">Resultat</span>
+        <div class="flex gap-3 text-sm">
+          <label><input type="radio" name="shot-result" value="goal" checked> Mål</label>
+          <label><input type="radio" name="shot-result" value="save"> Räddning</label>
+          <label><input type="radio" name="shot-result" value="miss"> Miss</label>
+          <label><input type="radio" name="shot-result" value="post"> Ribba/stolpe</label>
+        </div>
+      </div>
+
+      <p class="text-xs text-gray-500 flex-1">
+        Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
+        Klicka på “Ta bort” i listan nedan för att radera ett skott.
+      </p>
+    </div>
+
+    <div class="p-6 flex-1 overflow-hidden flex flex-col gap-4">
+      <!-- Själva isen / skottkartan -->
+      <div class="flex-1 flex items-center justify-center">
+        <div class="relative border rounded-xl overflow-hidden bg-sky-50"
+             style="width: 100%; max-width: 900px; aspect-ratio: 2 / 1;">
+          <canvas id="shot-editor-canvas" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Lista med skott -->
+      <div class="h-40 overflow-y-auto border rounded-lg">
+        <table class="w-full text-xs">
+          <thead class="bg-gray-50">
+          <tr>
+            <th class="px-2 py-1 text-left">Målvakt</th>
+            <th class="px-2 py-1 text-left">Resultat</th>
+            <th class="px-2 py-1 text-left">X</th>
+            <th class="px-2 py-1 text-left">Y</th>
+            <th class="px-2 py-1"></th>
+          </tr>
+          </thead>
+          <tbody id="shot-editor-list"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="px-6 py-4 border-t flex justify-end gap-3">
+      <button id="shot-editor-cancel"
+              class="px-4 py-2 text-sm rounded border">
+        Avbryt
+      </button>
+      <button id="shot-editor-save"
+              class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">
+        Spara skott
+      </button>
+    </div>
   </div>
 </div>
 
@@ -624,6 +697,32 @@
     return data;
   }
 
+  // ersätt alla skott för en match (används av editorn)
+  async function dbReplaceShotsForMatch(matchId, shots){
+    const { error: delErr } = await supabaseClient
+      .from("shots")
+      .delete()
+      .eq("match_id", matchId);
+    if (delErr) throw delErr;
+
+    if (!shots.length) return;
+
+    const rows = shots.map(s => ({
+      match_id: matchId,
+      goalie_id: s.goalie_id,
+      result: s.result,
+      period: s.period || null,
+      time: s.time || null,
+      x: s.x,
+      y: s.y
+    }));
+
+    const { error: insErr } = await supabaseClient
+      .from("shots")
+      .insert(rows);
+    if (insErr) throw insErr;
+  }
+
   // match_goalie_stats helpers
   async function dbMatchStatsBulk(matchIds){
     if (!matchIds.length) return [];
@@ -774,7 +873,7 @@
     svg.appendChild(goalR);
 
     const filtered = shots.filter(s=>{
-      if (filterGoalieId && filterGoalieId !== "ALL" && s.goalie_id !== filterGoalieId) return false;
+      if (filterGoalieId && filterGoalieId !== "ALL" && String(s.goalie_id) !== String(filterGoalieId)) return false;
       return true;
     });
 
@@ -799,7 +898,7 @@
 
   function renderShotLegend(el, shots, filterGoalieId){
     const filtered = shots.filter(s=>{
-      if (filterGoalieId && filterGoalieId !== "ALL" && s.goalie_id !== filterGoalieId) return false;
+      if (filterGoalieId && filterGoalieId !== "ALL" && String(s.goalie_id) !== String(filterGoalieId)) return false;
       return true;
     });
     const total = filtered.length;
@@ -881,8 +980,8 @@
     for (const r of statsRows){
       const shots = r.shots ?? 0;
       const saves = r.saves ?? 0;
-      let goals   = shots - saves;          // mål = skott – räddningar
-      if (goals < 0) goals = 0;             // safety, om något är felregistrerat
+      let goals   = r.goals ?? (shots - saves);
+      if (goals < 0) goals = 0;
 
       const row = {
         match_id : r.match_id,
@@ -890,7 +989,7 @@
         minutes  : r.minutes ?? 0,
         shots,
         saves,
-        goals    // <- nyckeln som resten av koden använder
+        goals
       };
 
       if (!map.has(r.match_id)) map.set(r.match_id, []);
@@ -899,7 +998,6 @@
 
     return map;
   }
-
 
   function getStatForGoalieMatch(statsByMatch, matchId, goalieId){
     const arr = statsByMatch.get(matchId) || [];
@@ -1182,7 +1280,7 @@
           const H = Math.round(W*0.6);
           const pad = 8;
           const filtered = shots.filter(s =>
-            filter === "ALL" || s.goalie_id === filter
+            filter === "ALL" || String(s.goalie_id) === String(filter)
           );
           const xgSum = filtered
             .filter(s=>{
@@ -1421,8 +1519,7 @@
         Lägg / redigera skott (skottkarta)
       </button>
       <div class="text-[11px] text-gray-500 mt-1">
-        Skottkartan visas i matchlistan. Här kan du senare bygga ett
-        separat gränssnitt för att redigera skott.
+        Skottkartan visas i matchlistan. Här kan du lägga till och ta bort skott.
       </div>
     `;
     body.appendChild(shotBtn);
@@ -1443,10 +1540,6 @@
     EDIT_MATCH_ID = null;
     EDIT_ENTRIES  = [];
     EDIT_SHOT_BUF = {};
-  }
-
-  async function openEditShots(matchId){
-    alert("Här kan man bygga ett separat gränssnitt för att redigera skott (kommande funktion).");
   }
 
   async function saveEditModal(){
@@ -1477,7 +1570,7 @@
     }
   }
 
-  // ---------- Shot modal ----------
+  // ---------- Shot modal (enkel) ----------
   let CURRENT_SHOT_MATCH  = null;
   let CURRENT_SHOT_GOALIE = null;
 
@@ -1547,76 +1640,165 @@
     });
   }
 
-  <!-- Skottkarta / Skott-editor -->
-  <div id="shot-editor-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between px-6 py-4 border-b">
-        <h2 class="text-lg font-semibold">Skottkarta – redigera skott</h2>
-        <button id="shot-editor-close" class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
-      </div>
+  // ---------- Skott-editor (avancerad) ----------
+  let SHOT_EDITOR_MATCH_ID = null;
+  let SHOT_EDITOR_SHOTS = [];
 
-      <div class="px-6 pt-4 pb-3 flex flex-wrap gap-4 items-center border-b">
-        <div>
-          <label class="block text-xs text-gray-500 mb-1">Målvakt</label>
-          <select id="shot-editor-goalie" class="border rounded px-2 py-1 text-sm">
-            <!-- fylls via JS -->
-          </select>
-        </div>
+  function renderShotEditor(){
+    const canvas = $("#shot-editor-canvas");
+    if (!canvas) return;
 
-        <div>
-          <span class="block text-xs text-gray-500 mb-1">Resultat</span>
-          <div class="flex gap-3 text-sm">
-            <label><input type="radio" name="shot-result" value="goal" checked> Mål</label>
-            <label><input type="radio" name="shot-result" value="save"> Räddning</label>
-            <label><input type="radio" name="shot-result" value="miss"> Miss</label>
-            <label><input type="radio" name="shot-result" value="post"> Ribba/stolpe</label>
-          </div>
-        </div>
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width || 800;
+    const H = rect.height || 400;
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
 
-        <p class="text-xs text-gray-500 flex-1">
-          Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
-          Klick på skott i listan nedan för att ta bort dem.
-        </p>
-      </div>
+    // rink-bakgrund
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1,1,W-2,H-2);
 
-      <div class="p-6 flex-1 overflow-hidden flex flex-col gap-4">
-        <!-- Själva isen / skottkartan -->
-        <div class="flex-1 flex items-center justify-center">
-          <div class="relative border rounded-xl overflow-hidden bg-sky-50"
-               style="width: 100%; max-width: 900px; aspect-ratio: 2 / 1;">
-            <!-- Rink-bakgrund: kan vara bara en div, du har ev. redan SVG eller canvas -->
-            <canvas id="shot-editor-canvas" class="w-full h-full"></canvas>
-          </div>
-        </div>
+    // mittlinje
+    ctx.strokeStyle = "#e11d48";
+    ctx.beginPath();
+    ctx.moveTo(W/2,0);
+    ctx.lineTo(W/2,H);
+    ctx.stroke();
 
-        <!-- Lista med skott -->
-        <div class="h-40 overflow-y-auto border rounded-lg">
-          <table class="w-full text-xs">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-2 py-1 text-left">Målvakt</th>
-                <th class="px-2 py-1 text-left">Resultat</th>
-                <th class="px-2 py-1 text-left">X</th>
-                <th class="px-2 py-1 text-left">Y</th>
-                <th class="px-2 py-1"></th>
-              </tr>
-            </thead>
-            <tbody id="shot-editor-list"></tbody>
-          </table>
-        </div>
-      </div>
+    // målzoner
+    ctx.fillStyle = "#fee2e2";
+    const gh = H*0.3;
+    const gy = H*0.35;
+    ctx.fillRect(0,gy,8,gh);
+    ctx.fillRect(W-8,gy,8,gh);
 
-      <div class="px-6 py-4 border-t flex justify-end gap-3">
-        <button id="shot-editor-cancel" class="px-4 py-2 text-sm rounded border">
-          Avbryt
-        </button>
-        <button id="shot-editor-save" class="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700">
-          Spara skott
-        </button>
-      </div>
-    </div>
-  </div>
+    // skott
+    const tbody = $("#shot-editor-list");
+    const goalieById = new Map(GOALIES.map(g=>[String(g.id), g]));
 
+    SHOT_EDITOR_SHOTS.forEach(s=>{
+      const cx = (s.x ?? 0.5)*W;
+      const cy = (s.y ?? 0.5)*H;
+      let color = "#0f766e";
+      const r = String(s.result||"").toLowerCase();
+      if (r==="goal") color = "#ef4444";
+      else if (r==="miss") color = "#6b7280";
+      else if (r==="post") color = "#f97316";
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(cx,cy,5,0,Math.PI*2);
+      ctx.fill();
+    });
+
+    if (tbody){
+      if (!SHOT_EDITOR_SHOTS.length){
+        tbody.innerHTML = `<tr><td colspan="5" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
+      } else {
+        tbody.innerHTML = SHOT_EDITOR_SHOTS.map((s,idx)=>{
+          const g = goalieById.get(String(s.goalie_id));
+          const gName = g ? (g.name || g.code || "Målvakt") : "Målvakt";
+          return `
+            <tr class="border-b last:border-b-0">
+              <td class="px-2 py-1">${gName}</td>
+              <td class="px-2 py-1">${s.result}</td>
+              <td class="px-2 py-1">${(s.x ?? 0).toFixed(3)}</td>
+              <td class="px-2 py-1">${(s.y ?? 0).toFixed(3)}</td>
+              <td class="px-2 py-1 text-right">
+                <button type="button" data-del-idx="${idx}" class="text-red-600 hover:underline">
+                  Ta bort
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+  }
+
+  async function openEditShots(matchId){
+    try{
+      SHOT_EDITOR_MATCH_ID = matchId;
+      SHOT_EDITOR_SHOTS = await dbLoadShotsForMatch(matchId);
+
+      // fyll målvaktslista
+      const sel = $("#shot-editor-goalie");
+      if (GOALIES.length){
+        sel.innerHTML = GOALIES.map(g =>
+          `<option value="${g.id}">${g.name || g.code || "Målvakt"}</option>`
+        ).join("");
+      } else {
+        sel.innerHTML = `<option value="">Inga målvakter</option>`;
+      }
+
+      const modal = $("#shot-editor-modal");
+      modal.classList.remove("hidden");
+
+      renderShotEditor();
+    } catch(e){
+      showError("open-edit-shots", e);
+    }
+  }
+
+  function closeShotEditor(){
+    const modal = $("#shot-editor-modal");
+    modal.classList.add("hidden");
+    SHOT_EDITOR_MATCH_ID = null;
+    SHOT_EDITOR_SHOTS = [];
+  }
+
+  function handleShotEditorCanvasClick(e){
+    if (!SHOT_EDITOR_MATCH_ID) return;
+    const canvas = $("#shot-editor-canvas");
+    const rect = canvas.getBoundingClientRect();
+    const xNorm = (e.clientX - rect.left)/rect.width;
+    const yNorm = (e.clientY - rect.top)/rect.height;
+
+    const sel = $("#shot-editor-goalie");
+    if (!sel || !sel.value){
+      alert("Välj målvakt först.");
+      return;
+    }
+    const goalieId = sel.value;
+    const resRadio = document.querySelector('input[name="shot-result"]:checked');
+    const result = resRadio ? resRadio.value : "goal";
+
+    SHOT_EDITOR_SHOTS.push({
+      match_id: SHOT_EDITOR_MATCH_ID,
+      goalie_id: goalieId,
+      result,
+      period: "1",
+      time: null,
+      x: xNorm,
+      y: yNorm
+    });
+
+    renderShotEditor();
+  }
+
+  function handleShotEditorListClick(e){
+    const btn = e.target.closest("[data-del-idx]");
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.delIdx,10);
+    if (Number.isNaN(idx)) return;
+    SHOT_EDITOR_SHOTS.splice(idx,1);
+    renderShotEditor();
+  }
+
+  async function saveShotEditor(){
+    if (!SHOT_EDITOR_MATCH_ID) return;
+    try{
+      await dbReplaceShotsForMatch(SHOT_EDITOR_MATCH_ID, SHOT_EDITOR_SHOTS);
+      window.__shots_cache && window.__shots_cache.delete(SHOT_EDITOR_MATCH_ID);
+      closeShotEditor();
+    } catch(e){
+      showError("save-shot-editor", e);
+    }
+  }
 
   // ---------- Import / Export ----------
   async function exportJSON(){
@@ -1722,6 +1904,15 @@
     // shot modal
     initShotRink();
     $("#shot-save").onclick = saveShot;
+
+    // shot editor
+    $("#shot-editor-close").onclick  = closeShotEditor;
+    $("#shot-editor-cancel").onclick = closeShotEditor;
+    $("#shot-editor-save").onclick   = saveShotEditor;
+    const seCanvas = $("#shot-editor-canvas");
+    if (seCanvas) seCanvas.addEventListener("click", handleShotEditorCanvasClick);
+    const seList = $("#shot-editor-list");
+    if (seList) seList.addEventListener("click", handleShotEditorListClick);
 
     // filter
     $("#btn-clear-filter").onclick = () => {
