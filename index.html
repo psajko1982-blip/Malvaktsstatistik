@@ -393,9 +393,21 @@
     return `${min.toFixed(1).replace(".", ",")} min`;
   }
   function showError(where, err) {
-    console.error("Error in", where, err);
-    alert(`Något gick fel (${where}). Kolla konsolen för detaljer.`);
+    console.error(`Error in ${where}`, err);
+
+    let msg = "Okänt fel";
+    if (err) {
+      if (err.message) msg = err.message;
+      else if (err.error_description) msg = err.error_description;
+      else if (err.details) msg = err.details;
+      else {
+        try { msg = JSON.stringify(err); } catch (_) {}
+      }
+    }
+
+    alert(`Något gick fel (${where}):\n\n${msg}`);
   }
+
 
   // ---------- Auth ----------
   let CURRENT_USER  = null;
