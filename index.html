@@ -427,28 +427,66 @@
       if (error) throw error;
       return data;
     }
-    async function dbGoalies(teamId){
-      const { data, error } = await supabaseClient
-        .from("goalies")
-        .select("*")
-        .eq("team_id", teamId)
-        .order("code", { ascending: true });
-      if (error) throw error;
-      return data || [];
-    }
-    async function dbMatches(teamId, fromDate, toDate){
-      let q = supabaseClient
-        .from("matches")
-        .select("*")
-        .eq("team_id", teamId)
-        .order("date", { ascending: false })
-        .order("id", { ascending: false });
-      if (fromDate) q = q.gte("date", fromDate);
-      if (toDate)   q = q.lte("date", toDate);
-      const { data, error } = await q;
-      if (error) throw error;
-      return data || [];
-    }
+      async function dbGoalies(teamId){
+        const { data, error } = await supabaseClient
+          .from("goalies")
+          .select("*")
+          .eq("team_id", teamId)
+          .order("code", { ascending: true });
+        if (error) throw error;
+        return data || [];
+      }
+      async function dbMatches(teamId, fromDate, toDate) {
+    let q = supabaseClient
+      .from("matches")
+      .select(`
+        id,
+        date,
+        opponent,
+        result,
+        notes,
+        team_id,
+        our_goals,
+        their_goals,
+        match_goalie_stats (
+          minutes,
+          saves,
+          shots,
+          goalie_id
+        )
+      `)
+      .eq("team_id", teamId)
+      .order("date", { ascending: false })
+      .order("id", { ascending: false });
+
+    if (fromDate) q = q.gte("date", fromDate);
+    if (toDate)   q = q.lte("date", toDate);
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    // Gör om match_goalie_stats → stats_json så att resten av appen funkar
+    return (data || []).map(m => {
+      const stats = {};
+      (m.match_goalie_stats || []).forEach(e => {
+        const shots = e.shots || 0;
+        const saves = e.saves || 0;
+        const goals = shots - saves;  // så har du gjort tidigare
+        stats[e.goalie_id] = {
+          minutes: e.minutes || 0,
+          shots,
+          goals
+        };
+      });
+
+      return {
+        ...m,
+        // resten av koden förväntar sig en JSON-sträng här
+        stats_json: JSON.stringify(stats)
+      };
+    });
+  }
+
     async function dbCreateGoalie(teamId, code, name){
       const { data, error } = await supabaseClient
         .from("goalies")
