@@ -689,13 +689,22 @@
   }
 
   async function dbAddShot(shot){
+    // se till att team_id alltid följer med
+    const row = {
+      ...shot,
+      team_id: CURRENT_TEAM_ID
+    };
+
     const { data, error } = await supabaseClient
       .from("shots")
-      .insert([shot])
-      .select().single();
+      .insert([row])
+      .select()
+      .single();
+
     if (error) throw error;
     return data;
   }
+
 
   // ersätt alla skott för en match (används av editorn)
   async function dbReplaceShotsForMatch(matchId, shots){
@@ -709,8 +718,8 @@
 
     const rows = shots.map(s => ({
       match_id: matchId,
+      team_id: CURRENT_TEAM_ID,          // 👈 lägg till team_id här
       goalie_id: s.goalie_id,
-      team_id: teamId,
       result: s.result,
       period: s.period || null,
       time: s.time || null,
@@ -723,6 +732,7 @@
       .insert(rows);
     if (insErr) throw insErr;
   }
+
 
   // match_goalie_stats helpers
   async function dbMatchStatsBulk(matchIds){
@@ -1770,6 +1780,7 @@
 
     SHOT_EDITOR_SHOTS.push({
       match_id: SHOT_EDITOR_MATCH_ID,
+      team_id: CURRENT_TEAM_ID,
       goalie_id: goalieId,
       result,
       period: "1",
