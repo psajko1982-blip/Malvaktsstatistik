@@ -1718,7 +1718,7 @@
   const centerY = H / 2;
 
   // Mållinjer (lite innanför kortsidorna)
-  const goalLineOffset = W * 0.11;
+  const goalLineOffset = W * 0.06;
   ctx.strokeStyle = "#ef4444";
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -1733,8 +1733,10 @@
   // Blå linjer (ungefär 25% / 75%)
   ctx.strokeStyle = "#3b82f6";
   ctx.lineWidth = 3;
-  const blue1 = W * 0.25;
-  const blue2 = W * 0.75;
+
+  const BLUE_RATIO = 22.86 / 60;
+  const blue1 = W * BLUE_RATIO;
+  const blue2 = W * (1 - BLUE_RATIO);
   ctx.beginPath();
   ctx.moveTo(blue1, 0);
   ctx.lineTo(blue1, H);
@@ -1825,7 +1827,7 @@
   ctx.fill();
 
   // Målgårdar – halvcirkel framför målet
-  const creaseRadius = H * 0.11;
+  const creaseRadius = H * 0.08;
   ctx.fillStyle = "rgba(147, 197, 253, 0.5)";
   ctx.strokeStyle = "#60a5fa";
   ctx.lineWidth = 2;
@@ -1906,12 +1908,6 @@
     save: "#10b981",
     miss: "#6b7280",
     post: "#f59e0b"
-  };
-  const glowMap = {
-    goal: "rgba(239, 68, 68, 0.5)",
-    save: "rgba(16, 185, 129, 0.5)",
-    miss: "rgba(107, 114, 128, 0.3)",
-    post: "rgba(245, 158, 11, 0.5)"
   };
 
   SHOT_EDITOR_SHOTS.forEach(s => {
