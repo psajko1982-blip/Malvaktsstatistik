@@ -1133,7 +1133,7 @@
     const ctx = cvs.getContext("2d");
     cvs.width = W; cvs.height = H;
     ctx.clearRect(0,0,W,H);
-    const sigma = 40;
+    const sigma = 28;
     const twoSigmaSq = 2*sigma*sigma;
     const pts = shots.map(s=>({
       x: pad + (W-2*pad)*(s.x ?? 0.5),
@@ -1852,7 +1852,7 @@
 
   // ----- HEATMAP (overlay) -----
   if (SHOT_EDITOR_SHOTS.length){
-    const sigma = 40;
+    const sigma = 28;
     const twoSigmaSq = 2 * sigma * sigma;
     const pts = SHOT_EDITOR_SHOTS.map(s => ({
       x: (s.x ?? 0.5) * W,
