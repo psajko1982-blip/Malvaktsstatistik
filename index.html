@@ -1053,6 +1053,14 @@
       const btn = e.target.closest("button[data-zone]");
       if (!btn) return;
       const zone = btn.dataset.zone;
+      if (input.value === zone){
+        input.value = "";
+        grid.querySelectorAll("button[data-zone]").forEach(b=>{
+          b.classList.remove("bg-sky-500","text-white");
+          if (!b.classList.contains("bg-slate-50")) b.classList.add("bg-slate-50");
+        });
+        return;
+      }
       input.value = zone;
       grid.querySelectorAll("button[data-zone]").forEach(b=>{
         b.classList.remove("bg-sky-500","text-white");
