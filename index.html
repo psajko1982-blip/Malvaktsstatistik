@@ -389,6 +389,15 @@
           <label><input type="radio" name="shot-result" value="post"> Ribba/stolpe</label>
         </div>
       </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Period</label>
+        <select id="shot-editor-period" class="border rounded px-2 py-1 text-sm">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="OT">OT</option>
+        </select>
+      </div>
 
       <p class="text-xs text-gray-500 flex-1">
         Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
@@ -412,6 +421,7 @@
           <tr>
             <th class="px-2 py-1 text-left">Målvakt</th>
             <th class="px-2 py-1 text-left">Resultat</th>
+            <th class="px-2 py-1 text-left">Period</th>
             <th class="px-2 py-1 text-left">X</th>
             <th class="px-2 py-1 text-left">Y</th>
             <th class="px-2 py-1"></th>
@@ -862,6 +872,49 @@
     return { from: f, to: t };
   }
 
+  function parseHomeAway(opponent){
+    const s = String(opponent || "");
+    const m = s.match(/\((h|b)\)\s*$/i);
+    return m ? m[1].toLowerCase() : "";
+  }
+
+  function stripHomeAway(opponent){
+    return String(opponent || "").replace(/\s*\((h|b)\)\s*$/i, "").trim();
+  }
+
+  function normalizeHomeAwayInput(v){
+    const s = String(v || "").trim().toLowerCase();
+    if (s === "h" || s === "hemma") return "h";
+    if (s === "b" || s === "borta") return "b";
+    return "";
+  }
+
+  function applyHomeAwayToOpponent(opponent, homeAway){
+    const base = stripHomeAway(opponent);
+    if (!homeAway) return base;
+    return base ? `${base} (${homeAway})` : `(${homeAway})`;
+  }
+
+  function isOurGoalRightForPeriod(ourGoalRightP1, period){
+    const p = String(period || "").toUpperCase();
+    if (p === "2") return !ourGoalRightP1;
+    if (p === "OT") return !ourGoalRightP1;
+    return ourGoalRightP1; // period 1/3
+  }
+
+  function mapShotForDisplay(shot, ourGoalRightP1){
+    const x = (shot.x ?? 0.5);
+    if (!isOurGoalRightForPeriod(ourGoalRightP1, shot.period)) {
+      return { ...shot, x: 1 - x };
+    }
+    return shot;
+  }
+
+  function mapShotXForStorage(xNorm, period, ourGoalRightP1){
+    if (!isOurGoalRightForPeriod(ourGoalRightP1, period)) return 1 - xNorm;
+    return xNorm;
+  }
+
   // ---------- Shot map / heatmap helpers ----------
   function drawRinkBase(ctx, W, H, pad=0){
     const RW = Math.max(1, W - pad * 2);
@@ -1044,6 +1097,18 @@
     ctx.restore();
   }
 
+  function drawOurGoalIndicator(ctx, W, H, ourGoalRight){
+    ctx.save();
+    ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+    ctx.textBaseline = "top";
+    const text = ourGoalRight ? "Vårt mål →" : "← Vårt mål";
+    const x = ourGoalRight ? (W - 90) : 10;
+    const y = 10;
+    ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
   function renderShotMap(rinkEl, shots, goalieById, filterGoalieId){
     rinkEl.innerHTML = "";
     const w = rinkEl.clientWidth  || 360;
@@ -1061,6 +1126,10 @@
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     drawRinkBase(ctx, w, h, pad);
+    if (shots.length){
+      const ourGoalRight = shots[0].__ourGoalRight ?? true;
+      drawOurGoalIndicator(ctx, w, h, ourGoalRight);
+    }
 
     const filtered = shots.filter(s=>{
       if (filterGoalieId && filterGoalieId !== "ALL" && String(s.goalie_id) !== String(filterGoalieId)) return false;
@@ -1335,6 +1404,7 @@
     const wrap  = $("#matches-wrap");
     const empty = $("#matches-empty");
     wrap.innerHTML = "";
+    window.__match_map = new Map(matches.map(m=>[m.id, m]));
     if (!matches.length){
       empty.classList.remove("hidden");
       return;
@@ -1411,6 +1481,15 @@
             <label class="text-xs">Målvakt:</label>
             <select id="shots-filter-${m.id}"
                     class="border rounded px-2 py-1 text-sm"></select>
+            <label class="text-xs">Period:</label>
+            <select id="shots-period-${m.id}"
+                    class="border rounded px-2 py-1 text-sm">
+              <option value="ALL">Alla</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="OT">OT</option>
+            </select>
           </div>
           <div class="relative w-full aspect-[2/1]">
             <div id="rink-${m.id}"
@@ -1438,8 +1517,9 @@
 
         const rinkEl   = document.getElementById("rink-"+matchId);
         const selEl    = document.getElementById("shots-filter-"+matchId);
+        const perEl    = document.getElementById("shots-period-"+matchId);
         const legendEl = document.getElementById("legend-"+matchId);
-        if (!rinkEl || !selEl || !legendEl) return;
+        if (!rinkEl || !selEl || !legendEl || !perEl) return;
 
         window.__shots_cache = window.__shots_cache || new Map();
         let shots = __shots_cache.get(matchId);
@@ -1463,16 +1543,28 @@
             }).join("");
 
         const draw = () => {
+          const match = window.__match_map?.get(matchId);
+          const ourRightP1 = (match?.our_goal_right_p1 ?? true);
           const filter = selEl.value || "ALL";
-          renderShotMap(rinkEl, shots, goalieById, filter);
-          renderShotLegend(legendEl, shots, filter);
+          const period = perEl.value || "ALL";
+          const periodFiltered = shots.filter(s => {
+            if (period === "ALL") return true;
+            const p = String(s.period || "").toUpperCase();
+            return p === period;
+          });
+          const filtered = periodFiltered.filter(s =>
+            filter === "ALL" || String(s.goalie_id) === String(filter)
+          );
+          const mapped = filtered.map(s => ({
+            ...mapShotForDisplay(s, ourRightP1),
+            __ourGoalRight: isOurGoalRightForPeriod(ourRightP1, s.period)
+          }));
+          renderShotMap(rinkEl, mapped, goalieById, filter);
+          renderShotLegend(legendEl, filtered, filter);
           const W = rinkEl.clientWidth || 360;
           const H = rinkEl.clientHeight || Math.round(W*0.6);
           const pad = 8;
-          const filtered = shots.filter(s =>
-            filter === "ALL" || String(s.goalie_id) === String(filter)
-          );
-          const xgSum = filtered
+          const xgSum = mapped
             .filter(s=>{
               const r = String(s.result||"").toLowerCase();
               return r.startsWith("goal") || r.startsWith("save");
@@ -1485,11 +1577,12 @@
           const cvs = document.getElementById("heat-"+matchId);
           if (chk && cvs){
             cvs.classList.toggle("hidden", !chk.checked);
-            if (chk.checked) drawHeatmap(cvs,W,H,pad,filtered);
+            if (chk.checked) drawHeatmap(cvs,W,H,pad,mapped);
           }
         };
 
         selEl.onchange = draw;
+        perEl.onchange = draw;
         const heatChk = document.querySelector('[data-heatmap="'+matchId+'"]');
         if (heatChk) heatChk.onchange = draw;
         draw();
@@ -1550,6 +1643,10 @@
     const d = prompt("Datum (YYYY-MM-DD):", new Date().toISOString().slice(0,10))?.trim();
     if (!d) return;
     const opp = prompt("Motståndare:")?.trim() || "";
+    const haIn = prompt("Hemma eller borta? (h/b):", "h")?.trim() || "";
+    const homeAway = normalizeHomeAwayInput(haIn);
+    const rightIn = prompt("Vårt mål är till höger i period 1? (ja/nej):", "ja")?.trim() || "ja";
+    const ourGoalRightP1 = !/^n(ej)?$/i.test(rightIn);
     const ourG   = Number(prompt("Vära mål:", "0")   || "0");
     const theirG = Number(prompt("Deras mål:", "0")  || "0");
     let result = "";
@@ -1560,7 +1657,8 @@
     }
     try{
       await dbCreateMatch(CURRENT_TEAM_ID,{
-        date: d, opponent: opp,
+        date: d, opponent: applyHomeAwayToOpponent(opp, homeAway),
+        our_goal_right_p1: ourGoalRightP1,
         our_goals: ourG, their_goals: theirG, result
       });
       await refreshAll();
@@ -1598,6 +1696,10 @@
     const body = $("#edit-body");
     body.innerHTML = "";
 
+    const existingHA = parseHomeAway(match.opponent);
+    const existingOpp = stripHomeAway(match.opponent);
+    const existingOurRightP1 = (match.our_goal_right_p1 ?? true);
+
     const meta = document.createElement("div");
     meta.className = "mb-3 text-sm";
     meta.innerHTML = `
@@ -1612,7 +1714,24 @@
           <label class="block text-xs text-gray-500 mb-1">Motståndare</label>
           <input id="edit-opp" type="text"
                  class="border rounded px-2 py-1 w-full text-sm"
-                 value="${match.opponent || ""}">
+                 value="${existingOpp}">
+        </div>
+        <div class="w-28">
+          <label class="block text-xs text-gray-500 mb-1">Hemma/borta</label>
+          <select id="edit-homeaway" class="border rounded px-2 py-1 w-full text-sm">
+            <option value="" ${existingHA ? "" : "selected"}>?</option>
+            <option value="h" ${existingHA === "h" ? "selected" : ""}>Hemma</option>
+            <option value="b" ${existingHA === "b" ? "selected" : ""}>Borta</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex gap-2 mt-2">
+        <div class="flex-1">
+          <label class="block text-xs text-gray-500 mb-1">Vårt mål höger i P1</label>
+          <select id="edit-ourgoal" class="border rounded px-2 py-1 w-full text-sm">
+            <option value="true" ${existingOurRightP1 ? "selected" : ""}>Ja</option>
+            <option value="false" ${!existingOurRightP1 ? "selected" : ""}>Nej</option>
+          </select>
         </div>
       </div>
       <div class="flex gap-2 mt-2">
@@ -1737,6 +1856,9 @@
     try{
       const date  = $("#edit-date").value || null;
       const opp   = $("#edit-opp").value || "";
+      const haSel = $("#edit-homeaway")?.value || "";
+      const homeAway = normalizeHomeAwayInput(haSel);
+      const ourGoalRightP1 = ($("#edit-ourgoal")?.value ?? "true") === "true";
       const our   = parseInt($("#edit-our").value  || "0",10);
       const their = parseInt($("#edit-their").value|| "0",10);
       let result = "";
@@ -1747,7 +1869,8 @@
       }
 
       await dbUpdateMatch(EDIT_MATCH_ID,{
-        date, opponent: opp,
+        date, opponent: applyHomeAwayToOpponent(opp, homeAway),
+        our_goal_right_p1: ourGoalRightP1,
         our_goals: our, their_goals: their, result
       });
 
@@ -1833,6 +1956,7 @@
   // ---------- Skott-editor (avancerad) ----------
   let SHOT_EDITOR_MATCH_ID = null;
   let SHOT_EDITOR_SHOTS = [];
+  let SHOT_EDITOR_OUR_RIGHT_P1 = true;
 
     function renderShotEditor(){
   const canvas = $("#shot-editor-canvas");
@@ -1845,16 +1969,23 @@
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const mappedShots = SHOT_EDITOR_SHOTS.map(s => ({
+    ...mapShotForDisplay(s, SHOT_EDITOR_OUR_RIGHT_P1),
+    __ourGoalRight: isOurGoalRightForPeriod(SHOT_EDITOR_OUR_RIGHT_P1, s.period)
+  }));
 
   // ----- BAKGRUND / RINK -----
   ctx.clearRect(0, 0, W, H);
   drawRinkBase(ctx, W, H, 0);
+  if (mappedShots.length){
+    drawOurGoalIndicator(ctx, W, H, mappedShots[0].__ourGoalRight ?? true);
+  }
 
   // ----- HEATMAP (overlay) -----
-  if (SHOT_EDITOR_SHOTS.length){
+  if (mappedShots.length){
     const sigma = 28;
     const twoSigmaSq = 2 * sigma * sigma;
-    const pts = SHOT_EDITOR_SHOTS.map(s => ({
+    const pts = mappedShots.map(s => ({
       x: (s.x ?? 0.5) * W,
       y: (s.y ?? 0.5) * H,
       w: String(s.result).toLowerCase() === "goal" ? 1.4 : 1.0
@@ -1907,7 +2038,7 @@
     post: "rgba(245, 158, 11, 0.35)"
   };
 
-  SHOT_EDITOR_SHOTS.forEach(s => {
+  mappedShots.forEach(s => {
     const cx = (s.x ?? 0.5) * W;
     const cy = (s.y ?? 0.5) * H;
     const key = String(s.result || "").toLowerCase();
@@ -1932,7 +2063,7 @@
 
     if (!SHOT_EDITOR_SHOTS.length){
       tbody.innerHTML =
-        `<tr><td colspan="5" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
+        `<tr><td colspan="6" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
     } else {
       tbody.innerHTML = SHOT_EDITOR_SHOTS.map((s, idx) => {
         const g = goalieById.get(String(s.goalie_id));
@@ -1941,6 +2072,7 @@
           <tr class="border-b last:border-b-0">
             <td class="px-2 py-1">${gName}</td>
             <td class="px-2 py-1">${s.result}</td>
+            <td class="px-2 py-1">${s.period || "-"}</td>
             <td class="px-2 py-1">${(s.x ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1">${(s.y ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1 text-right">
@@ -1961,6 +2093,8 @@
     try{
       SHOT_EDITOR_MATCH_ID = matchId;
       SHOT_EDITOR_SHOTS = await dbLoadShotsForMatch(matchId);
+      const mm = window.__match_map?.get(matchId);
+      SHOT_EDITOR_OUR_RIGHT_P1 = (mm?.our_goal_right_p1 ?? true);
 
       // fyll målvaktslista
       const sel = $("#shot-editor-goalie");
@@ -1986,6 +2120,7 @@
     modal.classList.add("hidden");
     SHOT_EDITOR_MATCH_ID = null;
     SHOT_EDITOR_SHOTS = [];
+    SHOT_EDITOR_OUR_RIGHT_P1 = true;
   }
 
   function handleShotEditorCanvasClick(e){
@@ -2003,15 +2138,18 @@
     const goalieId = sel.value;
     const resRadio = document.querySelector('input[name="shot-result"]:checked');
     const result = resRadio ? resRadio.value : "goal";
+    const perSel = $("#shot-editor-period");
+    const period = perSel ? perSel.value : "1";
+    const xStore = mapShotXForStorage(xNorm, period, SHOT_EDITOR_OUR_RIGHT_P1);
 
     SHOT_EDITOR_SHOTS.push({
       match_id: SHOT_EDITOR_MATCH_ID,
       team_id: CURRENT_TEAM_ID,
       goalie_id: goalieId,
       result,
-      period: "1",
+      period,
       time: null,
-      x: xNorm,
+      x: xStore,
       y: yNorm
     });
 
