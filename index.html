@@ -1413,7 +1413,7 @@
   function computeShotXG(W,H,pad,xNorm,yNorm){
     const x = pad + (W-2*pad)*(xNorm ?? 0.5);
     const y = pad + (H-2*pad)*(yNorm ?? 0.5);
-    const goalX = W - pad;
+    const goalX = (x < (W / 2)) ? pad : (W - pad);
     const goalY = H/2;
     const dx = goalX - x;
     const dy = goalY - y;
