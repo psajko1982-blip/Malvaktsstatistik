@@ -1288,7 +1288,7 @@
           renderShotMap(rinkEl, shots, goalieById, filter);
           renderShotLegend(legendEl, shots, filter);
           const W = rinkEl.clientWidth || 360;
-          const H = Math.round(W*0.6);
+          const H = rinkEl.clientHeight || Math.round(W*0.6);
           const pad = 8;
           const filtered = shots.filter(s =>
             filter === "ALL" || String(s.goalie_id) === String(filter)
