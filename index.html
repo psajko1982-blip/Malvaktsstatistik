@@ -688,11 +688,37 @@
     return data || [];
   }
 
+  function normalizeShotResult(result){
+    const r = String(result || "").trim().toLowerCase();
+    if (!r) return "save";
+    const map = {
+      "goal": "goal",
+      "mål": "goal",
+      "mal": "goal",
+      "save": "save",
+      "räddning": "save",
+      "raddning": "save",
+      "miss": "miss",
+      "post": "post",
+      "ribba": "post",
+      "stolpe": "post",
+      "ribba/stolpe": "post",
+      "ribba och stolpe": "post"
+    };
+    if (map[r]) return map[r];
+    if (r.startsWith("goal")) return "goal";
+    if (r.startsWith("save")) return "save";
+    if (r.startsWith("miss")) return "miss";
+    if (r.startsWith("post")) return "post";
+    return "save";
+  }
+
   async function dbAddShot(shot){
     // se till att team_id alltid följer med
     const row = {
       ...shot,
-      team_id: CURRENT_TEAM_ID
+      team_id: CURRENT_TEAM_ID,
+      result: normalizeShotResult(shot.result)
     };
 
     const { data, error } = await supabaseClient
@@ -720,7 +746,7 @@
       match_id: matchId,
       team_id: CURRENT_TEAM_ID,          // ?? lägg till team_id här
       goalie_id: s.goalie_id,
-      result: s.result,
+      result: normalizeShotResult(s.result),
       period: s.period || null,
       time: s.time || null,
       x: s.x,
