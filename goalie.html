@@ -226,7 +226,8 @@ async function loadPage(){
       const goals = e.goals | 0;
       const saves = Math.max(0, (e.saves != null ? (e.saves | 0) : (shots - goals)));
       return { date:mm.date, opponent:mm.opponent, minutes:e.minutes|0, saves, shots };
-    }).sort((a,b)=>a.date.localeCompare(b.date));
+    }).filter(r => (r.minutes || 0) > 0)
+      .sort((a,b)=>a.date.localeCompare(b.date));
 
     // Summera + render
     const minutes = rows.reduce((a,r)=>a+r.minutes,0);
