@@ -198,7 +198,7 @@ async function loadPage(){
 
     // Stats
     const st = await sb.from('match_goalie_stats')
-      .select('match_id, minutes, saves, shots')
+      .select('match_id, minutes, shots, goals')
       .eq('team_id', TEAM_ID)
       .eq('goalie_id', g.data.id);
     if (st.error) throw st.error;
@@ -221,8 +221,11 @@ async function loadPage(){
     // Sammanfoga
     const statById = Object.fromEntries((st.data||[]).map(x => [x.match_id, x]));
     const rows = (m.data||[]).map(mm => {
-      const e = statById[mm.id] || { minutes:0, saves:0, shots:0 };
-      return { date:mm.date, opponent:mm.opponent, minutes:e.minutes|0, saves:e.saves|0, shots:e.shots|0 };
+      const e = statById[mm.id] || { minutes:0, shots:0, goals:0 };
+      const shots = e.shots | 0;
+      const goals = e.goals | 0;
+      const saves = Math.max(0, (e.saves != null ? (e.saves | 0) : (shots - goals)));
+      return { date:mm.date, opponent:mm.opponent, minutes:e.minutes|0, saves, shots };
     }).sort((a,b)=>a.date.localeCompare(b.date));
 
     // Summera + render

@@ -106,7 +106,7 @@ async function loadGoalies(){
 /* ===== Hämta data för valda ===== */
 async function fetchDataFor(goalieIds){
   const st = await sb.from('match_goalie_stats')
-    .select('match_id, goalie_id, minutes, saves, shots')
+    .select('match_id, goalie_id, minutes, shots, goals')
     .eq('team_id', TEAM_ID)
     .in('goalie_id', goalieIds);
   if(st.error) throw st.error;
@@ -129,7 +129,10 @@ async function fetchDataFor(goalieIds){
 
   st.data.forEach(row=>{
     const mm = matchesById[row.match_id]; if(!mm) return;
-    perGoalie[row.goalie_id].series.push({ date:mm.date, opponent:mm.opponent, minutes:row.minutes, saves:row.saves, shots:row.shots });
+    const shots = row.shots | 0;
+    const goals = row.goals | 0;
+    const saves = Math.max(0, (row.saves != null ? (row.saves | 0) : (shots - goals)));
+    perGoalie[row.goalie_id].series.push({ date:mm.date, opponent:mm.opponent, minutes:row.minutes, saves, shots });
   });
 
   for(const id of goalieIds){
