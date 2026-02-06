@@ -863,51 +863,204 @@
   }
 
   // ---------- Shot map / heatmap helpers ----------
+  function drawRinkBase(ctx, W, H, pad=0){
+    const RW = Math.max(1, W - pad * 2);
+    const RH = Math.max(1, H - pad * 2);
+    ctx.save();
+    ctx.translate(pad, pad);
+
+    const iceGradient = ctx.createLinearGradient(0, 0, RW, RH);
+    iceGradient.addColorStop(0, "#f8fafc");
+    iceGradient.addColorStop(0.5, "#ffffff");
+    iceGradient.addColorStop(1, "#f1f5f9");
+    ctx.fillStyle = iceGradient;
+
+    const cornerRadius = RH * 0.18;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(0, 0, RW, RH, cornerRadius);
+    } else {
+      ctx.moveTo(cornerRadius, 0);
+      ctx.lineTo(RW - cornerRadius, 0);
+      ctx.quadraticCurveTo(RW, 0, RW, cornerRadius);
+      ctx.lineTo(RW, RH - cornerRadius);
+      ctx.quadraticCurveTo(RW, RH, RW - cornerRadius, RH);
+      ctx.lineTo(cornerRadius, RH);
+      ctx.quadraticCurveTo(0, RH, 0, RH - cornerRadius);
+      ctx.lineTo(0, cornerRadius);
+      ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
+    }
+    ctx.fill();
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(1.5, 1.5, RW - 3, RH - 3, cornerRadius);
+    } else {
+      ctx.moveTo(cornerRadius, 1.5);
+      ctx.lineTo(RW - cornerRadius, 1.5);
+      ctx.quadraticCurveTo(RW - 1.5, 1.5, RW - 1.5, cornerRadius);
+      ctx.lineTo(RW - 1.5, RH - cornerRadius);
+      ctx.quadraticCurveTo(RW - 1.5, RH - 1.5, RW - cornerRadius, RH - 1.5);
+      ctx.lineTo(cornerRadius, RH - 1.5);
+      ctx.quadraticCurveTo(1.5, RH - 1.5, 1.5, RH - cornerRadius);
+      ctx.lineTo(1.5, cornerRadius);
+      ctx.quadraticCurveTo(1.5, 1.5, cornerRadius, 1.5);
+    }
+    ctx.stroke();
+
+    const centerX = RW / 2;
+    const centerY = RH / 2;
+
+    const goalLineOffset = RW * 0.06;
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(goalLineOffset, 6);
+    ctx.lineTo(goalLineOffset, RH - 6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(RW - goalLineOffset, 6);
+    ctx.lineTo(RW - goalLineOffset, RH - 6);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#3b82f6";
+    ctx.lineWidth = 3;
+    const BLUE_RATIO = 25 / 60;
+    const blue1 = RW * BLUE_RATIO;
+    const blue2 = RW * (1 - BLUE_RATIO);
+    ctx.beginPath();
+    ctx.moveTo(blue1, 0);
+    ctx.lineTo(blue1, RH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(blue2, 0);
+    ctx.lineTo(blue2, RH);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 8]);
+    ctx.beginPath();
+    ctx.moveTo(centerX, 0);
+    ctx.lineTo(centerX, RH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const centerCircleRadius = Math.min(RW, RH) * 0.18;
+    ctx.strokeStyle = "#60a5fa";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, centerCircleRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    function drawFaceOffCircle(x, y, withCircle){
+      const circleRadius = Math.min(RW, RH) * 0.14;
+      if (withCircle){
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        const hashLength = 8;
+        const hashOffset = circleRadius * 0.4;
+        ctx.beginPath();
+        ctx.moveTo(x - hashOffset, y - circleRadius + 5);
+        ctx.lineTo(x - hashOffset, y - circleRadius + 5 + hashLength);
+        ctx.moveTo(x + hashOffset, y - circleRadius + 5);
+        ctx.lineTo(x + hashOffset, y - circleRadius + 5 + hashLength);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(x - hashOffset, y + circleRadius - 5);
+        ctx.lineTo(x - hashOffset, y + circleRadius - 5 - hashLength);
+        ctx.moveTo(x + hashOffset, y + circleRadius - 5);
+        ctx.lineTo(x + hashOffset, y + circleRadius - 5 - hashLength);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#ef4444";
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const offX = RW * 0.21;
+    const offYTop = RH * 0.24;
+    const offYBot = RH * 0.76;
+    const nzX = centerX + RW * 0.13;
+    drawFaceOffCircle(offX, offYTop, true);
+    drawFaceOffCircle(offX, offYBot, true);
+    drawFaceOffCircle(RW - offX, offYTop, true);
+    drawFaceOffCircle(RW - offX, offYBot, true);
+    drawFaceOffCircle(centerX - (nzX - centerX), offYTop, false);
+    drawFaceOffCircle(centerX - (nzX - centerX), offYBot, false);
+    drawFaceOffCircle(nzX, offYTop, false);
+    drawFaceOffCircle(nzX, offYBot, false);
+
+    ctx.fillStyle = "#ef4444";
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    const creaseRadius = RH * 0.08;
+    ctx.fillStyle = "rgba(147, 197, 253, 0.5)";
+    ctx.strokeStyle = "#60a5fa";
+    ctx.lineWidth = 2;
+    const leftCreaseCenterX = goalLineOffset + creaseRadius * 0.8;
+    ctx.beginPath();
+    ctx.arc(leftCreaseCenterX, centerY, creaseRadius, -Math.PI/2, Math.PI/2);
+    ctx.lineTo(goalLineOffset, centerY + creaseRadius);
+    ctx.lineTo(goalLineOffset, centerY - creaseRadius);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const rightCreaseCenterX = RW - goalLineOffset - creaseRadius * 0.8;
+    ctx.beginPath();
+    ctx.arc(rightCreaseCenterX, centerY, creaseRadius, Math.PI/2, -Math.PI/2);
+    ctx.lineTo(RW - goalLineOffset, centerY - creaseRadius);
+    ctx.lineTo(RW - goalLineOffset, centerY + creaseRadius);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    const netWidth = RW * 0.02;
+    const netHeight = RH * 0.18;
+    ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
+    ctx.strokeStyle = "#64748b";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.rect(goalLineOffset - netWidth - 3, centerY - netHeight / 2, netWidth, netHeight);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(RW - goalLineOffset + 3, centerY - netHeight / 2, netWidth, netHeight);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
   function renderShotMap(rinkEl, shots, goalieById, filterGoalieId){
     rinkEl.innerHTML = "";
     const w = rinkEl.clientWidth  || 360;
     const h = rinkEl.clientHeight || 180;
     const pad = 8;
-    const svgNS = "http://www.w3.org/2000/svg";
 
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.setAttribute("width","100%");
-    svg.setAttribute("height","100%");
-    svg.classList.add("rounded-xl");
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.classList.add("rounded-xl");
+    rinkEl.appendChild(canvas);
 
-    const rect = document.createElementNS(svgNS,"rect");
-    rect.setAttribute("x",0);rect.setAttribute("y",0);
-    rect.setAttribute("width",w);rect.setAttribute("height",h);
-    rect.setAttribute("rx",10);rect.setAttribute("ry",10);
-    rect.setAttribute("fill","#f8fafc");
-    rect.setAttribute("stroke","#e5e7eb");
-    svg.appendChild(rect);
-
-    const center = document.createElementNS(svgNS,"line");
-    center.setAttribute("x1", w/2);
-    center.setAttribute("y1", 0);
-    center.setAttribute("x2", w/2);
-    center.setAttribute("y2", h);
-    center.setAttribute("stroke","#e11d48");
-    center.setAttribute("stroke-width",1.5);
-    svg.appendChild(center);
-
-    const goalL = document.createElementNS(svgNS,"rect");
-    goalL.setAttribute("x",0);
-    goalL.setAttribute("y",h*0.35);
-    goalL.setAttribute("width",6);
-    goalL.setAttribute("height",h*0.3);
-    goalL.setAttribute("fill","#fee2e2");
-    svg.appendChild(goalL);
-
-    const goalR = document.createElementNS(svgNS,"rect");
-    goalR.setAttribute("x",w-6);
-    goalR.setAttribute("y",h*0.35);
-    goalR.setAttribute("width",6);
-    goalR.setAttribute("height",h*0.3);
-    goalR.setAttribute("fill","#fee2e2");
-    svg.appendChild(goalR);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    drawRinkBase(ctx, w, h, pad);
 
     const filtered = shots.filter(s=>{
       if (filterGoalieId && filterGoalieId !== "ALL" && String(s.goalie_id) !== String(filterGoalieId)) return false;
@@ -917,20 +1070,19 @@
     for (const s of filtered){
       const cx = pad + (w-2*pad)*(s.x ?? 0.5);
       const cy = pad + (h-2*pad)*(s.y ?? 0.5);
-      const c  = document.createElementNS(svgNS,"circle");
-      c.setAttribute("cx",cx);
-      c.setAttribute("cy",cy);
-      c.setAttribute("r",4);
       let color = "#0f766e";
       const r = String(s.result||"").toLowerCase();
       if (r.startsWith("goal")) color = "#ef4444";
       else if (r.startsWith("miss")) color = "#6b7280";
       else if (r.startsWith("post")) color = "#f97316";
-      c.setAttribute("fill",color);
-      c.setAttribute("fill-opacity",0.85);
-      svg.appendChild(c);
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.85;
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
-    rinkEl.appendChild(svg);
   }
 
   function renderShotLegend(el, shots, filterGoalieId){
@@ -1696,205 +1848,7 @@
 
   // ----- BAKGRUND / RINK -----
   ctx.clearRect(0, 0, W, H);
-
-  // Isbakgrund
-  const iceGradient = ctx.createLinearGradient(0, 0, W, H);
-  iceGradient.addColorStop(0, "#f8fafc");
-  iceGradient.addColorStop(0.5, "#ffffff");
-  iceGradient.addColorStop(1, "#f1f5f9");
-  ctx.fillStyle = iceGradient;
-
-  // Rink med normal rundning i härnen
-  const cornerRadius = H * 0.18; // << mindre än tidigare
-  ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(0, 0, W, H, cornerRadius);
-  } else {
-    ctx.moveTo(cornerRadius, 0);
-    ctx.lineTo(W - cornerRadius, 0);
-    ctx.quadraticCurveTo(W, 0, W, cornerRadius);
-    ctx.lineTo(W, H - cornerRadius);
-    ctx.quadraticCurveTo(W, H, W - cornerRadius, H);
-    ctx.lineTo(cornerRadius, H);
-    ctx.quadraticCurveTo(0, H, 0, H - cornerRadius);
-    ctx.lineTo(0, cornerRadius);
-    ctx.quadraticCurveTo(0, 0, cornerRadius, 0);
-  }
-  ctx.fill();
-
-  // Sarg
-  ctx.strokeStyle = "#cbd5e1";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  if (ctx.roundRect) {
-    ctx.roundRect(1.5, 1.5, W - 3, H - 3, cornerRadius);
-  } else {
-    ctx.moveTo(cornerRadius, 1.5);
-    ctx.lineTo(W - cornerRadius, 1.5);
-    ctx.quadraticCurveTo(W - 1.5, 1.5, W - 1.5, cornerRadius);
-    ctx.lineTo(W - 1.5, H - cornerRadius);
-    ctx.quadraticCurveTo(W - 1.5, H - 1.5, W - cornerRadius, H - 1.5);
-    ctx.lineTo(cornerRadius, H - 1.5);
-    ctx.quadraticCurveTo(1.5, H - 1.5, 1.5, H - cornerRadius);
-    ctx.lineTo(1.5, cornerRadius);
-    ctx.quadraticCurveTo(1.5, 1.5, cornerRadius, 1.5);
-  }
-  ctx.stroke();
-
-  const centerX = W / 2;
-  const centerY = H / 2;
-
-  // Mållinjer (lite innanför kortsidorna)
-  const goalLineOffset = W * 0.06;
-  ctx.strokeStyle = "#ef4444";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(goalLineOffset, 0 + 6);
-  ctx.lineTo(goalLineOffset, H - 6);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(W - goalLineOffset, 0 + 6);
-  ctx.lineTo(W - goalLineOffset, H - 6);
-  ctx.stroke();
-
-  // Blå linjer (ungeför 25% / 75%)
-  ctx.strokeStyle = "#3b82f6";
-  ctx.lineWidth = 3;
-
-  const BLUE_RATIO = 25 / 60;
-  const blue1 = W * BLUE_RATIO;
-  const blue2 = W * (1 - BLUE_RATIO);
-  ctx.beginPath();
-  ctx.moveTo(blue1, 0);
-  ctx.lineTo(blue1, H);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(blue2, 0);
-  ctx.lineTo(blue2, H);
-  ctx.stroke();
-
-  // Centerlinje (streckad)
-  ctx.strokeStyle = "#ef4444";
-  ctx.lineWidth = 3;
-  ctx.setLineDash([8, 8]);
-  ctx.beginPath();
-  ctx.moveTo(centerX, 0);
-  ctx.lineTo(centerX, H);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Mittcirkel
-  const centerCircleRadius = Math.min(W, H) * 0.18;
-  ctx.strokeStyle = "#60a5fa";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, centerCircleRadius, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Faceoff-hjälpfunktion
-  function drawFaceOffCircle(x, y, withCircle){
-    const circleRadius = Math.min(W, H) * 0.14;
-
-    if (withCircle){
-      ctx.strokeStyle = "#ef4444";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
-      ctx.stroke();
-
-      const hashLength = 8;
-      const hashOffset = circleRadius * 0.4;
-
-      // topp
-      ctx.beginPath();
-      ctx.moveTo(x - hashOffset, y - circleRadius + 5);
-      ctx.lineTo(x - hashOffset, y - circleRadius + 5 + hashLength);
-      ctx.moveTo(x + hashOffset, y - circleRadius + 5);
-      ctx.lineTo(x + hashOffset, y - circleRadius + 5 + hashLength);
-      ctx.stroke();
-
-      // botten
-      ctx.beginPath();
-      ctx.moveTo(x - hashOffset, y + circleRadius - 5);
-      ctx.lineTo(x - hashOffset, y + circleRadius - 5 - hashLength);
-      ctx.moveTo(x + hashOffset, y + circleRadius - 5);
-      ctx.lineTo(x + hashOffset, y + circleRadius - 5 - hashLength);
-      ctx.stroke();
-    }
-
-    // prick
-    ctx.fillStyle = "#ef4444";
-    ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Tekningspunkter - mer "riktiga" proportioner
-  const offX = W * 0.21;
-  const offYTop = H * 0.24;
-  const offYBot = H * 0.76;
-  const nzX = centerX + W * 0.13;
-
-  // Slutzoner
-  drawFaceOffCircle(offX, offYTop, true);
-  drawFaceOffCircle(offX, offYBot, true);
-  drawFaceOffCircle(W - offX, offYTop, true);
-  drawFaceOffCircle(W - offX, offYBot, true);
-
-  // Neutral zon (utan cirklar)
-  drawFaceOffCircle(centerX - (nzX - centerX), offYTop, false);
-  drawFaceOffCircle(centerX - (nzX - centerX), offYBot, false);
-  drawFaceOffCircle(nzX, offYTop, false);
-  drawFaceOffCircle(nzX, offYBot, false);
-
-  // Mittprick
-  ctx.fillStyle = "#ef4444";
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Målgårdar - halvcirkel framför målet
-  const creaseRadius = H * 0.08;
-  ctx.fillStyle = "rgba(147, 197, 253, 0.5)";
-  ctx.strokeStyle = "#60a5fa";
-  ctx.lineWidth = 2;
-
-  // vänster
-  const leftCreaseCenterX = goalLineOffset + creaseRadius * 0.8;
-  ctx.beginPath();
-  ctx.arc(leftCreaseCenterX, centerY, creaseRadius, -Math.PI/2, Math.PI/2);
-  ctx.lineTo(goalLineOffset, centerY + creaseRadius);
-  ctx.lineTo(goalLineOffset, centerY - creaseRadius);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // höger
-  const rightCreaseCenterX = W - goalLineOffset - creaseRadius * 0.8;
-  ctx.beginPath();
-  ctx.arc(rightCreaseCenterX, centerY, creaseRadius, Math.PI/2, -Math.PI/2);
-  ctx.lineTo(W - goalLineOffset, centerY - creaseRadius);
-  ctx.lineTo(W - goalLineOffset, centerY + creaseRadius);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-
-  // Målburar (små rektanglar bakom mållinjen)
-  const netWidth = W * 0.02;
-  const netHeight = H * 0.18;
-  ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
-  ctx.strokeStyle = "#64748b";
-  ctx.lineWidth = 1.5;
-
-  ctx.beginPath();
-  ctx.rect(goalLineOffset - netWidth - 3, centerY - netHeight / 2, netWidth, netHeight);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.rect(W - goalLineOffset + 3, centerY - netHeight / 2, netWidth, netHeight);
-  ctx.fill();
-  ctx.stroke();
+  drawRinkBase(ctx, W, H, 0);
 
   // ----- HEATMAP (overlay) -----
   if (SHOT_EDITOR_SHOTS.length){
