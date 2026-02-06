@@ -895,8 +895,29 @@
     return base ? `${base} (${homeAway})` : `(${homeAway})`;
   }
 
+  function periodToDb(value){
+    const v = String(value || "").toUpperCase();
+    if (v === "OT") return 4;
+    const n = parseInt(v, 10);
+    if (n === 1 || n === 2 || n === 3) return n;
+    return 1;
+  }
+
+  function periodLabel(value){
+    const v = String(value || "").toUpperCase();
+    if (v === "OT" || v === "4") return "OT";
+    if (v === "1" || v === "2" || v === "3") return v;
+    return "-";
+  }
+
+  function periodEquals(filterValue, rowValue){
+    const f = String(filterValue || "").toUpperCase();
+    if (f === "ALL") return true;
+    return periodLabel(rowValue) === f;
+  }
+
   function isOurGoalRightForPeriod(ourGoalRightP1, period){
-    const p = String(period || "").toUpperCase();
+    const p = periodLabel(period);
     if (p === "2") return !ourGoalRightP1;
     if (p === "OT") return !ourGoalRightP1;
     return ourGoalRightP1; // period 1/3
@@ -1097,13 +1118,13 @@
     ctx.restore();
   }
 
-  function drawOurGoalIndicator(ctx, W, H, ourGoalRight){
+  function drawOurGoalIndicator(ctx, W, H, ourGoalRight=true){
     ctx.save();
     ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
     ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
     ctx.textBaseline = "top";
-    const text = ourGoalRight ? "Vårt mål →" : "← Vårt mål";
-    const x = ourGoalRight ? (W - 90) : 10;
+    const text = "Vårt mål →";
+    const x = W - 90;
     const y = 10;
     ctx.fillText(text, x, y);
     ctx.restore();
@@ -1126,10 +1147,7 @@
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     drawRinkBase(ctx, w, h, pad);
-    if (shots.length){
-      const ourGoalRight = shots[0].__ourGoalRight ?? true;
-      drawOurGoalIndicator(ctx, w, h, ourGoalRight);
-    }
+    drawOurGoalIndicator(ctx, w, h, true);
 
     const filtered = shots.filter(s=>{
       if (filterGoalieId && filterGoalieId !== "ALL" && String(s.goalie_id) !== String(filterGoalieId)) return false;
@@ -1547,18 +1565,11 @@
           const ourRightP1 = (match?.our_goal_right_p1 ?? true);
           const filter = selEl.value || "ALL";
           const period = perEl.value || "ALL";
-          const periodFiltered = shots.filter(s => {
-            if (period === "ALL") return true;
-            const p = String(s.period || "").toUpperCase();
-            return p === period;
-          });
+          const periodFiltered = shots.filter(s => periodEquals(period, s.period));
           const filtered = periodFiltered.filter(s =>
             filter === "ALL" || String(s.goalie_id) === String(filter)
           );
-          const mapped = filtered.map(s => ({
-            ...mapShotForDisplay(s, ourRightP1),
-            __ourGoalRight: isOurGoalRightForPeriod(ourRightP1, s.period)
-          }));
+          const mapped = filtered.map(s => mapShotForDisplay(s, ourRightP1));
           renderShotMap(rinkEl, mapped, goalieById, filter);
           renderShotLegend(legendEl, filtered, filter);
           const W = rinkEl.clientWidth || 360;
@@ -1926,7 +1937,7 @@
         match_id: CURRENT_SHOT_MATCH,
         goalie_id: CURRENT_SHOT_GOALIE,
         result: res,
-        period: per,
+        period: periodToDb(per),
         time, x, y
       });
       closeShotModal();
@@ -1969,17 +1980,12 @@
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const mappedShots = SHOT_EDITOR_SHOTS.map(s => ({
-    ...mapShotForDisplay(s, SHOT_EDITOR_OUR_RIGHT_P1),
-    __ourGoalRight: isOurGoalRightForPeriod(SHOT_EDITOR_OUR_RIGHT_P1, s.period)
-  }));
+  const mappedShots = SHOT_EDITOR_SHOTS.map(s => mapShotForDisplay(s, SHOT_EDITOR_OUR_RIGHT_P1));
 
   // ----- BAKGRUND / RINK -----
   ctx.clearRect(0, 0, W, H);
   drawRinkBase(ctx, W, H, 0);
-  if (mappedShots.length){
-    drawOurGoalIndicator(ctx, W, H, mappedShots[0].__ourGoalRight ?? true);
-  }
+  drawOurGoalIndicator(ctx, W, H, true);
 
   // ----- HEATMAP (overlay) -----
   if (mappedShots.length){
@@ -2072,7 +2078,7 @@
           <tr class="border-b last:border-b-0">
             <td class="px-2 py-1">${gName}</td>
             <td class="px-2 py-1">${s.result}</td>
-            <td class="px-2 py-1">${s.period || "-"}</td>
+            <td class="px-2 py-1">${periodLabel(s.period)}</td>
             <td class="px-2 py-1">${(s.x ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1">${(s.y ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1 text-right">
@@ -2140,14 +2146,15 @@
     const result = resRadio ? resRadio.value : "goal";
     const perSel = $("#shot-editor-period");
     const period = perSel ? perSel.value : "1";
-    const xStore = mapShotXForStorage(xNorm, period, SHOT_EDITOR_OUR_RIGHT_P1);
+    const periodDb = periodToDb(period);
+          const xStore = mapShotXForStorage(xNorm, periodLabel(periodDb), SHOT_EDITOR_OUR_RIGHT_P1);
 
     SHOT_EDITOR_SHOTS.push({
       match_id: SHOT_EDITOR_MATCH_ID,
       team_id: CURRENT_TEAM_ID,
       goalie_id: goalieId,
       result,
-      period,
+      period: periodDb,
       time: null,
       x: xStore,
       y: yNorm
