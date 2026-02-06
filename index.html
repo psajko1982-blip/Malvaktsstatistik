@@ -1358,9 +1358,11 @@
       for (const m of matches){
         const s = getStatForGoalieMatch(statsByMatch, m.id, g.id);
         if (!s) continue;
+        const min = s.minutes || 0;
+        if (min <= 0) continue;
         shots   += s.shots   || 0;
         goals   += s.goals   || 0;
-        minutes += s.minutes || 0;
+        minutes += min;
       }
       const saves = shots-goals;
       const sv = shots>0 ? saves/shots : null;
@@ -1385,9 +1387,10 @@
       rows.innerHTML = `
         <div class="rounded-xl border p-2">
           <div class="text-[11px] text-slate-500">Matcher</div>
-          <div class="font-semibold">${matches.filter(m =>
-            getStatForGoalieMatch(statsByMatch,m.id,g.id)
-          ).length}</div>
+          <div class="font-semibold">${matches.filter(m => {
+            const s = getStatForGoalieMatch(statsByMatch,m.id,g.id);
+            return s && (s.minutes || 0) > 0;
+          }).length}</div>
         </div>
         <div class="rounded-xl border p-2">
           <div class="text-[11px] text-slate-500">Räddnings-%</div>
