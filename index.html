@@ -409,7 +409,7 @@
 <!-- Skottkarta / Skott-editor (ny modal) -->
 <div id="shot-editor-modal"
      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[94vh] flex flex-col">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[96vh] flex flex-col">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h2 class="text-lg font-semibold">Skottkarta - redigera skott</h2>
       <button id="shot-editor-close"
@@ -494,7 +494,7 @@
       </div>
 
       <!-- Lista med skott -->
-      <div class="h-56 overflow-y-auto border rounded-lg">
+      <div class="h-64 overflow-y-auto border rounded-lg">
         <table class="w-full text-xs">
           <thead class="bg-gray-50">
           <tr>
@@ -1002,6 +1002,28 @@
     return map[n-1];
   }
 
+  function formatShotInfo(s){
+    const parts = [];
+    parts.push(`Resultat: ${s.result || "-"}`);
+    parts.push(`Period: ${periodLabel(s.period)}`);
+    if (s.time) parts.push(`Tid: ${s.time}`);
+    if (s.shot_type) parts.push(`Typ: ${s.shot_type}`);
+    if (s.tags && s.tags.length) parts.push(`Taggar: ${s.tags.join(", ")}`);
+    if (s.target_zone) parts.push(`Målruta: ${formatTargetZone(s.target_zone)}`);
+    return parts.join(" | ");
+  }
+
+  function ensureShotTooltip(rinkEl){
+    let tip = rinkEl.querySelector(".shot-tip");
+    if (!tip){
+      tip = document.createElement("div");
+      tip.className = "shot-tip absolute z-10 text-[11px] bg-white/95 border rounded px-2 py-1 shadow";
+      tip.style.display = "none";
+      rinkEl.appendChild(tip);
+    }
+    return tip;
+  }
+
   function collectTags(selector){
     return $$(selector).filter(cb=>cb.checked).map(cb=>cb.value);
   }
@@ -1310,6 +1332,35 @@
       ctx.fill();
       ctx.globalAlpha = 1;
     }
+
+    // Click to show shot info
+    const tip = ensureShotTooltip(rinkEl);
+    canvas.onclick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      let best = null;
+      let bestD = 9999;
+      for (const s of filtered){
+        const cx = pad + (w-2*pad)*(s.x ?? 0.5);
+        const cy = pad + (h-2*pad)*(s.y ?? 0.5);
+        const dx = x - cx;
+        const dy = y - cy;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < bestD){
+          bestD = d2;
+          best = s;
+        }
+      }
+      if (!best || bestD > 144){ // 12px radius
+        tip.style.display = "none";
+        return;
+      }
+      tip.textContent = formatShotInfo(best);
+      tip.style.left = Math.min(x + 8, w - 10) + "px";
+      tip.style.top = Math.max(6, y - 24) + "px";
+      tip.style.display = "block";
+    };
   }
 
   function renderShotLegend(el, shots, filterGoalieId){
