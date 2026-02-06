@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MV – Jämför målvakter</title>
+  <title>MV - J�mf�r m�lvakter</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -16,10 +16,10 @@
     <div class="sticky top-0 z-10 -mx-3 -mt-3 mb-3 bg-white/80 backdrop-blur p-3 border-b">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-xl font-bold">MV – Jämför målvakter</h1>
-          <p class="text-sm text-gray-600">Välj flera i samma team och jämför</p>
+          <h1 class="text-xl font-bold">MV - J�mf�r m�lvakter</h1>
+          <p class="text-sm text-gray-600">V�lj flera i samma team och j�mf�r</p>
         </div>
-        <a href="index.html" class="text-sm underline">← Tillbaka</a>
+        <a href="index.html" class="text-sm underline">? Tillbaka</a>
       </div>
     </div>
 
@@ -27,14 +27,14 @@
     <div class="rounded-2xl border bg-white p-4 shadow-sm mb-4">
       <div class="grid gap-3 sm:grid-cols-3">
         <div>
-          <div class="text-xs text-gray-500 mb-1">Team-ID (från URL)</div>
+          <div class="text-xs text-gray-500 mb-1">Team-ID (fr�n URL)</div>
           <input id="team-id" class="w-full rounded-xl border p-2 text-sm" disabled>
         </div>
         <div class="sm:col-span-2">
-          <div class="text-xs text-gray-500 mb-1">Välj målvakter (2–4)</div>
+          <div class="text-xs text-gray-500 mb-1">V�lj m�lvakter (2-4)</div>
           <select id="sel-goalies" class="w-full rounded-xl border p-2 text-sm" multiple size="6"></select>
           <div class="mt-2 flex gap-2">
-            <button id="btn-compare" class="rounded-xl border px-3 py-1 text-sm">Jämför</button>
+            <button id="btn-compare" class="rounded-xl border px-3 py-1 text-sm">J�mf�r</button>
             <button id="btn-export" class="rounded-xl border px-3 py-1 text-sm" disabled>Exportera CSV</button>
           </div>
         </div>
@@ -47,12 +47,12 @@
     <!-- Grafer -->
     <div class="grid gap-4 mb-4">
       <div class="rounded-2xl border shadow-sm p-3 bg-white">
-        <div class="text-sm text-gray-500">Rädd% över tid (overlay)</div>
+        <div class="text-sm text-gray-500">R�dd% �ver tid (overlay)</div>
         <div class="mt-3 h-56"><canvas id="svpctChart"></canvas></div>
         <div id="empty-svpct" class="text-center text-sm text-gray-500 mt-2 hidden">Ingen data att visa.</div>
       </div>
       <div class="rounded-2xl border shadow-sm p-3 bg-white">
-        <div class="text-sm text-gray-500">Skott & Räddningar per match (summa per datum)</div>
+        <div class="text-sm text-gray-500">Skott & R�ddningar per match (summa per datum)</div>
         <div class="mt-3 h-56"><canvas id="srChart"></canvas></div>
         <div id="empty-sr" class="text-center text-sm text-gray-500 mt-2 hidden">Ingen data att visa.</div>
       </div>
@@ -73,7 +73,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
 
 /* ===== Helpers ===== */
 const $ = s => document.querySelector(s);
-const pct = (saves, shots)=> shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '–';
+const pct = (saves, shots)=> shots>0 ? ((saves/shots)*100).toFixed(2)+'%' : '-';
 const pctNum = (saves, shots)=> shots>0 ? +(((saves/shots)*100).toFixed(2)) : null;
 const escCSV = v => { const s=String(v??''); return /[;"\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s; };
 function download(filename, content, mime){ const b=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'}); const u=URL.createObjectURL(b); const a=document.createElement('a'); a.href=u; a.download=filename; a.click(); URL.revokeObjectURL(u); }
@@ -89,7 +89,7 @@ async function ensureSession(timeoutMs=4000){
   });
 }
 
-/* ===== Laddning av målvakter ===== */
+/* ===== Laddning av m�lvakter ===== */
 let ALL_GOALIES = [];
 async function loadGoalies(){
   const r = await sb.from('goalies').select('id,code,name').eq('team_id', TEAM_ID).order('code');
@@ -103,7 +103,7 @@ async function loadGoalies(){
   });
 }
 
-/* ===== Hämta data för valda ===== */
+/* ===== H�mta data f�r valda ===== */
 async function fetchDataFor(goalieIds){
   const st = await sb.from('match_goalie_stats')
     .select('match_id, goalie_id, minutes, saves, shots')
@@ -150,17 +150,17 @@ function renderTotals(cards){
     div.innerHTML=`
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-sm text-gray-500">Målvakt</div>
+          <div class="text-sm text-gray-500">M�lvakt</div>
           <div class="text-lg font-semibold">${c.name} <span class="text-sm text-gray-500">(${c.code})</span></div>
         </div>
         <div class="text-right">
-          <div class="text-sm text-gray-500">Rädd%</div>
+          <div class="text-sm text-gray-500">R�dd%</div>
           <div class="text-xl font-bold">${pct(c.saves, c.shots)}</div>
         </div>
       </div>
       <div class="grid grid-cols-3 gap-2 mt-3 text-center text-sm">
         <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Minuter</div><div class="font-semibold">${c.minutes}</div></div>
-        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Räddningar</div><div class="font-semibold">${c.saves}</div></div>
+        <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">R�ddningar</div><div class="font-semibold">${c.saves}</div></div>
         <div class="rounded-xl border p-2"><div class="text-xs text-gray-500">Skott</div><div class="font-semibold">${c.shots}</div></div>
       </div>`;
     wrap.appendChild(div);
@@ -208,7 +208,7 @@ function renderCharts(perGoalie, dates){
   if (hasBars){
     srChart = new Chart($('#srChart').getContext('2d'), {
       type:'bar',
-      data:{ labels: dates, datasets:[ { label:'Skott (summa)', data: dates.map(d=>shotsPerDate[d]) }, { label:'Räddningar (summa)', data: dates.map(d=>savesPerDate[d]) } ] },
+      data:{ labels: dates, datasets:[ { label:'Skott (summa)', data: dates.map(d=>shotsPerDate[d]) }, { label:'R�ddningar (summa)', data: dates.map(d=>savesPerDate[d]) } ] },
       options:{ responsive:true, maintainAspectRatio:false, scales:{ y:{ beginAtZero:true } }, plugins:{ legend:{ position:'bottom' } } }
     });
   }
@@ -227,13 +227,13 @@ function exportCSV(perGoalie){
   const BOM = '\uFEFF'; download('mv_compare.csv', BOM + lines.join('\r\n'), 'text/csv');
 }
 
-/* ===== Jämför-knapp ===== */
+/* ===== J�mf�r-knapp ===== */
 async function compareNow(){
   $('#msg').textContent = '';
   const sel = $('#sel-goalies');
   const chosen = [...sel.selectedOptions].map(o=>o.value);
   if (chosen.length < 2 || chosen.length > 4){
-    $('#msg').textContent = 'Välj 2–4 målvakter att jämföra.';
+    $('#msg').textContent = 'V�lj 2-4 m�lvakter att j�mf�ra.';
     return;
   }
 
@@ -298,9 +298,9 @@ function enableExport(perGoalie, dates){
 }
 /* ===== Boot ===== */
 (async () => {
-  $('#team-id').value = TEAM_ID || '(saknas – lägg ?team=...)';
+  $('#team-id').value = TEAM_ID || '(saknas - l�gg ?team=...)';
   const s = await ensureSession();
-  if(!s){ $('#msg').textContent='Ingen inloggning hittades. Gå till startsidan och logga in.'; return; }
+  if(!s){ $('#msg').textContent='Ingen inloggning hittades. G� till startsidan och logga in.'; return; }
   if(!TEAM_ID){ $('#msg').textContent='Saknar team i URL (?team=...)'; return; }
   await loadGoalies();
 })();

@@ -1,0 +1,11 @@
+{
+  "name": "Målvaktsstatistik",
+  "short_name": "Målvakt",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#111827",
+  "lang": "sv",
+  "icons": [],
+  "_note": "icons placeholder: add 192x192 and 512x512 PNGs when available"
+}

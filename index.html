@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-  <title>Målvaktsstatistik</title>
+  <title>M�lvaktsstatistik</title>
 
-  <!-- Tailwind (CDN för enkelhet) -->
+  <!-- Tailwind (CDN f�r enkelhet) -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Supabase v2 -->
@@ -18,7 +18,7 @@
     input[type=number] { -moz-appearance: textfield; }
   </style>
 
-  <!-- manifest är frivillig – ta bort raden om du inte använder PWA -->
+  <!-- manifest �r frivillig - ta bort raden om du inte anv�nder PWA -->
   <!-- <link rel="manifest" href="manifest.webmanifest"> -->
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -32,9 +32,9 @@
           MV
         </div>
         <div>
-          <div class="font-semibold leading-tight">Målvaktsstatistik</div>
+          <div class="font-semibold leading-tight">M�lvaktsstatistik</div>
           <div class="text-xs text-slate-300">
-            Fokuserat på målvakten – skott, räddningar, mål, xG &amp; skottkarta
+            Fokuserat p� m�lvakten - skott, r�ddningar, m�l, xG &amp; skottkarta
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@
           <span>Datumfilter:</span>
           <input id="filter-from" type="date"
                  class="border rounded px-2 py-1 text-xs">
-          <span>–</span>
+          <span>-</span>
           <input id="filter-to" type="date"
                  class="border rounded px-2 py-1 text-xs">
           <button id="btn-clear-filter"
@@ -92,47 +92,47 @@
           <div class="flex items-center justify-between mb-2">
             <div>
               <div class="text-xs text-slate-500">Matcher</div>
-              <div id="summary-matches" class="text-xl font-semibold">–</div>
+              <div id="summary-matches" class="text-xl font-semibold">-</div>
             </div>
             <div class="text-right text-[11px] text-slate-500">
-              <div id="summary-result" class="font-medium">–</div>
+              <div id="summary-result" class="font-medium">-</div>
               <div>V / O / F</div>
             </div>
           </div>
           <div class="mt-1 text-[11px] text-slate-500">
-            Filter påverkar statistiken nedan.
+            Filter p�verkar statistiken nedan.
           </div>
         </div>
 
         <div class="bg-white rounded-2xl p-3 shadow-sm">
           <div class="flex items-center justify-between mb-2">
             <div>
-              <div class="text-xs text-slate-500">Totalt skott på mål</div>
-              <div id="summary-shots" class="text-xl font-semibold">–</div>
+              <div class="text-xs text-slate-500">Totalt skott p� m�l</div>
+              <div id="summary-shots" class="text-xl font-semibold">-</div>
             </div>
             <div class="text-right text-[11px] text-slate-500">
-              <div class="font-medium" id="summary-goals">–</div>
-              <div>Insläppta mål</div>
+              <div class="font-medium" id="summary-goals">-</div>
+              <div>Insl�ppta m�l</div>
             </div>
           </div>
           <div class="mt-1 text-[11px] text-slate-500">
-            Inklusive alla målvakter i laget.
+            Inklusive alla m�lvakter i laget.
           </div>
         </div>
 
         <div class="bg-white rounded-2xl p-3 shadow-sm">
           <div class="flex items-center justify-between mb-2">
             <div>
-              <div class="text-xs text-slate-500">Genomsnittlig räddningsprocent</div>
-              <div id="summary-svpct" class="text-xl font-semibold">–</div>
+              <div class="text-xs text-slate-500">Genomsnittlig r�ddningsprocent</div>
+              <div id="summary-svpct" class="text-xl font-semibold">-</div>
             </div>
             <div class="text-right text-[11px] text-slate-500">
-              <div id="summary-goalies" class="font-medium">–</div>
-              <div>Målvakter med matcher</div>
+              <div id="summary-goalies" class="font-medium">-</div>
+              <div>M�lvakter med matcher</div>
             </div>
           </div>
           <div class="mt-1 text-[11px] text-slate-500">
-            Beräknas på totala skott &amp; mål per målvakt.
+            Ber�knas p� totala skott &amp; m�l per m�lvakt.
           </div>
         </div>
       </div>
@@ -145,7 +145,7 @@
         </button>
         <button data-tab="tab-goalies"
                 class="tab-btn pb-2 text-slate-500">
-          Målvakter
+          M�lvakter
         </button>
         <button data-tab="tab-import"
                 class="tab-btn pb-2 text-slate-500">
@@ -164,22 +164,22 @@
         </div>
         <div id="matches-wrap" class="space-y-3"></div>
         <div id="matches-empty" class="hidden text-sm text-slate-500 mt-4">
-          Inga matcher ännu. Klicka på <b>Ny match</b> för att lägga till.
+          Inga matcher �nnu. Klicka p� <b>Ny match</b> f�r att l�gga till.
         </div>
       </section>
 
       <!-- Tab: Goalies -->
       <section id="tab-goalies" class="tab-pane hidden">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-base font-semibold">Målvakter</h2>
+          <h2 class="text-base font-semibold">M�lvakter</h2>
           <button id="btn-new-goalie"
                   class="px-3 py-1.5 rounded-xl bg-sky-600 text-white text-sm hover:bg-sky-700">
-            + Ny målvakt
+            + Ny m�lvakt
           </button>
         </div>
         <div id="goalies-wrap" class="space-y-3"></div>
         <div id="goalies-empty" class="hidden text-sm text-slate-500 mt-4">
-          Inga målvakter ännu. Lägg till en för att börja.
+          Inga m�lvakter �nnu. L�gg till en f�r att b�rja.
         </div>
       </section>
 
@@ -190,7 +190,7 @@
         <div class="bg-white rounded-2xl p-3 shadow-sm mb-3">
           <div class="text-sm font-medium mb-1">Exportera data</div>
           <div class="text-xs text-slate-500 mb-2">
-            Exportera alla målvakter, matcher och skott som JSON.
+            Exportera alla m�lvakter, matcher och skott som JSON.
           </div>
           <button id="btn-export-json"
                   class="px-3 py-1.5 rounded-xl border border-slate-300 text-sm hover:bg-slate-50">
@@ -201,9 +201,9 @@
         <div class="bg-white rounded-2xl p-3 shadow-sm mb-3">
           <div class="text-sm font-medium mb-1">Importera data</div>
           <div class="text-xs text-slate-500 mb-2">
-            JSON: innehåller målvakter, matcher och skott (export från appen).<br>
-            CSV: endast matcher &amp; statistik (t.ex. från Excel). CSV använder semikolon
-            (<code>;</code>) som avgränsare.
+            JSON: inneh�ller m�lvakter, matcher och skott (export fr�n appen).<br>
+            CSV: endast matcher &amp; statistik (t.ex. fr�n Excel). CSV anv�nder semikolon
+            (<code>;</code>) som avgr�nsare.
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -218,8 +218,8 @@
           </div>
 
           <div class="text-xs text-gray-500 mt-2">
-            JSON innehåller målvakter + matcher + skott. CSV är semikolon-separerad
-            med rubriker. Import gör upsert (datum+motstånd) och ersätter stats för matchen.
+            JSON inneh�ller m�lvakter + matcher + skott. CSV �r semikolon-separerad
+            med rubriker. Import g�r upsert (datum+motst�nd) och ers�tter stats f�r matchen.
           </div>
         </div>
       </section>
@@ -228,18 +228,18 @@
   </main>
 </div>
 
-<!-- Modal: Lägg skott (enklare modal – används vid behov) -->
+<!-- Modal: L�gg skott (enklare modal - anv�nds vid behov) -->
 <div id="shot-modal"
      class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
   <div class="bg-white rounded-2xl p-4 w-full max-w-md">
     <div class="flex items-center justify-between mb-2">
       <div class="font-semibold">
-        Lägg skott – <span id="shot-modal-code"></span>
+        L�gg skott - <span id="shot-modal-code"></span>
       </div>
-      <button type="button" class="text-sm underline" onclick="closeShotModal()">Stäng</button>
+      <button type="button" class="text-sm underline" onclick="closeShotModal()">St�ng</button>
     </div>
     <div class="text-xs text-gray-500 mb-1">
-      Klicka på rinken för att lägga skott
+      Klicka p� rinken f�r att l�gga skott
     </div>
 
     <div id="shot-rink"
@@ -262,9 +262,9 @@
         <label class="block text-[11px] text-gray-500 mb-1">Resultat</label>
         <select id="shot-result"
                 class="border rounded px-2 py-1 w-full text-xs">
-          <option value="save">Räddning</option>
-          <option value="goal">Mål</option>
-          <option value="miss">Utanför</option>
+          <option value="save">R�ddning</option>
+          <option value="goal">M�l</option>
+          <option value="miss">Utanf�r</option>
           <option value="post">Ribba/Stolpe</option>
         </select>
       </div>
@@ -275,7 +275,7 @@
           <option value="1">1:a</option>
           <option value="2">2:a</option>
           <option value="3">3:e</option>
-          <option value="OT">Övertid</option>
+          <option value="OT">�vertid</option>
         </select>
       </div>
       <div class="flex-1">
@@ -306,7 +306,7 @@
   <div class="bg-white rounded-2xl p-4 w-full max-w-lg max-h-[90vh] flex flex-col">
     <div class="flex items-center justify-between mb-2">
       <div class="font-semibold">Redigera match</div>
-      <button type="button" class="text-sm underline" onclick="closeEditModal()">Stäng</button>
+      <button type="button" class="text-sm underline" onclick="closeEditModal()">St�ng</button>
     </div>
     <div id="edit-body" class="flex-1 overflow-auto text-sm">
       <!-- Fylls dynamiskt -->
@@ -319,7 +319,7 @@
       </button>
       <button id="edit-save" type="button"
               class="px-3 py-1.5 text-sm rounded-xl bg-sky-600 text-white hover:bg-sky-700">
-        Spara ändringar
+        Spara �ndringar
       </button>
     </div>
   </div>
@@ -331,7 +331,7 @@
   <div class="bg-white rounded-2xl p-4 w-full max-w-sm">
     <div class="flex items-center justify-between mb-2">
       <div class="font-semibold">Logga in / Skapa konto</div>
-      <button type="button" class="text-sm underline" onclick="closeAuthModal()">Stäng</button>
+      <button type="button" class="text-sm underline" onclick="closeAuthModal()">St�ng</button>
     </div>
     <div class="space-y-2 text-sm">
       <div>
@@ -340,12 +340,12 @@
                class="border rounded px-2 py-1 w-full text-sm">
       </div>
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Lösenord</label>
+        <label class="block text-xs text-gray-500 mb-1">L�senord</label>
         <input id="auth-password" type="password"
                class="border rounded px-2 py-1 w-full text-sm">
       </div>
       <div class="text-xs text-gray-500">
-        Kontot används för att spara dina lag, målvakter, matcher och skott i molnet (Supabase).
+        Kontot anv�nds f�r att spara dina lag, m�lvakter, matcher och skott i molnet (Supabase).
       </div>
       <div class="flex gap-2 mt-2">
         <button id="auth-signin"
@@ -367,14 +367,14 @@
      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
   <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
     <div class="flex items-center justify-between px-6 py-4 border-b">
-      <h2 class="text-lg font-semibold">Skottkarta – redigera skott</h2>
+      <h2 class="text-lg font-semibold">Skottkarta - redigera skott</h2>
       <button id="shot-editor-close"
-              class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
+              class="text-sm text-gray-500 hover:text-gray-700">St�ng</button>
     </div>
 
     <div class="px-6 pt-4 pb-3 flex flex-wrap gap-4 items-center border-b">
       <div>
-        <label class="block text-xs text-gray-500 mb-1">Målvakt</label>
+        <label class="block text-xs text-gray-500 mb-1">M�lvakt</label>
         <select id="shot-editor-goalie" class="border rounded px-2 py-1 text-sm">
           <!-- fylls via JS -->
         </select>
@@ -383,21 +383,21 @@
       <div>
         <span class="block text-xs text-gray-500 mb-1">Resultat</span>
         <div class="flex gap-3 text-sm">
-          <label><input type="radio" name="shot-result" value="goal" checked> Mål</label>
-          <label><input type="radio" name="shot-result" value="save"> Räddning</label>
+          <label><input type="radio" name="shot-result" value="goal" checked> M�l</label>
+          <label><input type="radio" name="shot-result" value="save"> R�ddning</label>
           <label><input type="radio" name="shot-result" value="miss"> Miss</label>
           <label><input type="radio" name="shot-result" value="post"> Ribba/stolpe</label>
         </div>
       </div>
 
       <p class="text-xs text-gray-500 flex-1">
-        Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
-        Klicka på “Ta bort” i listan nedan för att radera ett skott.
+        Klicka p� isen f�r att l�gga till skott. V�lj m�lvakt och resultat ovan.  
+        Klicka p� "Ta bort" i listan nedan f�r att radera ett skott.
       </p>
     </div>
 
     <div class="p-6 flex-1 overflow-hidden flex flex-col gap-4">
-      <!-- Själva isen / skottkartan -->
+      <!-- Sj�lva isen / skottkartan -->
       <div class="flex-1 flex items-center justify-center">
         <div class="relative border rounded-xl overflow-hidden bg-sky-50"
              style="width: 100%; max-width: 900px; aspect-ratio: 2 / 1;">
@@ -410,7 +410,7 @@
         <table class="w-full text-xs">
           <thead class="bg-gray-50">
           <tr>
-            <th class="px-2 py-1 text-left">Målvakt</th>
+            <th class="px-2 py-1 text-left">M�lvakt</th>
             <th class="px-2 py-1 text-left">Resultat</th>
             <th class="px-2 py-1 text-left">X</th>
             <th class="px-2 py-1 text-left">Y</th>
@@ -441,16 +441,16 @@
   const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rZHZjdmJtZ3Bvc2JodnJ5Z29wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2ODgyMjUsImV4cCI6MjA3MzI2NDIyNX0.w4SCljFULEduafWZexzmQqyG08pGoUFOeSCbfuCFaJg";
   const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ---------- Hjälpfunktioner ----------
+  // ---------- Hj�lpfunktioner ----------
   const $  = (sel, root=document) => root.querySelector(sel);
   const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
 
   function fmtPct(num) {
-    if (num == null || isNaN(num)) return "–";
+    if (num == null || isNaN(num)) return "-";
     return (num*100).toFixed(1).replace(".", ",") + " %";
   }
   function fmtInt(num) {
-    if (num == null || isNaN(num)) return "–";
+    if (num == null || isNaN(num)) return "-";
     return String(Math.round(num));
   }
   function fmtDate(str) {
@@ -462,13 +462,13 @@
     } catch(e) { return str; }
   }
   function fmtTimeMin(min) {
-    if (min == null || isNaN(min)) return "–";
+    if (min == null || isNaN(min)) return "-";
     return `${min.toFixed(1).replace(".", ",")} min`;
   }
   function showError(where, err) {
     console.error(`Error in ${where}`, err);
 
-    let msg = "Okänt fel";
+    let msg = "Ok�nt fel";
     if (err) {
       if (err.message) msg = err.message;
       else if (err.error_description) msg = err.error_description;
@@ -478,7 +478,7 @@
       }
     }
 
-    alert(`Något gick fel (${where}):\n\n${msg}`);
+    alert(`N�got gick fel (${where}):\n\n${msg}`);
   }
 
 
@@ -533,7 +533,7 @@
     const msgEl = $("#auth-msg");
     msgEl.textContent = "";
     if (!email || !password){
-      msgEl.textContent = "Fyll i både e-post och lösenord.";
+      msgEl.textContent = "Fyll i b�de e-post och l�senord.";
       return;
     }
     try{
@@ -549,7 +549,7 @@
         const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) throw error;
         CURRENT_USER = data.user;
-        msgEl.textContent = "Konto skapat! Du är inloggad.";
+        msgEl.textContent = "Konto skapat! Du �r inloggad.";
         renderAuth();
         await initTeams();
         await refreshAll();
@@ -586,7 +586,7 @@
     return data || [];
   }
 
-  // Hämta matcher + ev. statistik från match_goalie_stats
+  // H�mta matcher + ev. statistik fr�n match_goalie_stats
   async function dbMatches(teamId, fromDate, toDate){
     let q = supabaseClient
       .from("matches")
@@ -689,7 +689,7 @@
   }
 
   async function dbAddShot(shot){
-    // se till att team_id alltid följer med
+    // se till att team_id alltid f�ljer med
     const row = {
       ...shot,
       team_id: CURRENT_TEAM_ID
@@ -706,7 +706,7 @@
   }
 
 
-  // ersätt alla skott för en match (används av editorn)
+  // ers�tt alla skott f�r en match (anv�nds av editorn)
   async function dbReplaceShotsForMatch(matchId, shots){
     const { error: delErr } = await supabaseClient
       .from("shots")
@@ -718,7 +718,7 @@
 
     const rows = shots.map(s => ({
       match_id: matchId,
-      team_id: CURRENT_TEAM_ID,          // 👈 lägg till team_id här
+      team_id: CURRENT_TEAM_ID,          // ?? l�gg till team_id h�r
       goalie_id: s.goalie_id,
       result: s.result,
       period: s.period || null,
@@ -921,10 +921,10 @@
     el.innerHTML = `
       <div class="flex flex-wrap gap-3">
         <div class="flex items-center gap-1 text-xs">
-          <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span> Mål: ${goals}
+          <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span> M�l: ${goals}
         </div>
         <div class="flex items-center gap-1 text-xs">
-          <span class="inline-block w-3 h-3 rounded-full bg-teal-700"></span> Räddn: ${saves}
+          <span class="inline-block w-3 h-3 rounded-full bg-teal-700"></span> R�ddn: ${saves}
         </div>
         <div class="flex items-center gap-1 text-xs">
           <span class="inline-block w-3 h-3 rounded-full bg-gray-500"></span> Miss: ${miss}
@@ -1072,7 +1072,7 @@
     if (svArr.length){
       avg = svArr.reduce((a,s)=>a+s,0)/svArr.length;
     }
-    $("#summary-svpct").textContent = (avg==null) ? "–"
+    $("#summary-svpct").textContent = (avg==null) ? "-"
       : (avg*100).toFixed(1).replace(".",",")+" %";
     $("#summary-goalies").textContent = fmtInt(goalieStats.length);
   }
@@ -1124,7 +1124,7 @@
           ).length}</div>
         </div>
         <div class="rounded-xl border p-2">
-          <div class="text-[11px] text-slate-500">Räddnings-%</div>
+          <div class="text-[11px] text-slate-500">R�ddnings-%</div>
           <div class="font-semibold">${fmtPct(sv)}</div>
         </div>
         <div class="rounded-xl border p-2">
@@ -1170,10 +1170,10 @@
         <div class="flex items-center justify-between mb-1">
           <div>
             <div class="text-sm font-semibold">
-              ${fmtDate(m.date)} – ${m.opponent || "Motståndare?"}
+              ${fmtDate(m.date)} - ${m.opponent || "Motst�ndare?"}
             </div>
             <div class="text-xs text-slate-500">
-              Resultat: ${m.our_goals ?? "–"} – ${m.their_goals ?? "–"}
+              Resultat: ${m.our_goals ?? "-"} - ${m.their_goals ?? "-"}
               ${m.result ? "(" + m.result + ")" : ""}
             </div>
           </div>
@@ -1199,7 +1199,7 @@
 
       const rowsHtml = rows.map(r => `
         <div class="grid grid-cols-12 gap-1 text-xs py-1 border-b last:border-b-0">
-          <div class="col-span-6">${r.g.name || r.g.code || "(målvakt)"}</div>
+          <div class="col-span-6">${r.g.name || r.g.code || "(m�lvakt)"}</div>
           <div class="col-span-2 text-center">${fmtTimeMin(r.min)}</div>
           <div class="col-span-2 text-center">${fmtPct(r.sv)}</div>
           <div class="col-span-2 text-center">${fmtInt(r.shots)}</div>
@@ -1208,14 +1208,14 @@
 
       card.innerHTML = hdr + `
         <div class="grid grid-cols-12 text-xs text-gray-500 border-b pb-1 mb-1">
-          <div class="col-span-6">Målvakt</div>
+          <div class="col-span-6">M�lvakt</div>
           <div class="col-span-2 text-center">Min</div>
-          <div class="col-span-2 text-center">Räddn</div>
+          <div class="col-span-2 text-center">R�ddn</div>
           <div class="col-span-2 text-center">Skott</div>
         </div>
         ${rowsHtml}
         <div class="mt-2 text-[11px] text-gray-500">
-          “Skott” = räddningar + mål. Miss/block visas inte här.
+          "Skott" = r�ddningar + m�l. Miss/block visas inte h�r.
         </div>
         <div class="mt-3 flex items-center justify-between">
           <button class="text-sm underline" data-shots-toggle="${m.id}">
@@ -1228,8 +1228,8 @@
               <input type="checkbox" data-heatmap="${m.id}">
               Heatmap
             </label>
-            <span class="text-xs">xG: <b id="xg-${m.id}">–</b></span>
-            <label class="text-xs">Målvakt:</label>
+            <span class="text-xs">xG: <b id="xg-${m.id}">-</b></span>
+            <label class="text-xs">M�lvakt:</label>
             <select id="shots-filter-${m.id}"
                     class="border rounded px-2 py-1 text-sm"></select>
           </div>
@@ -1276,10 +1276,10 @@
 
         const gids = [...new Set(shots.map(s=>s.goalie_id))];
         const goalieById = new Map((GOALIES||[]).map(g=>[g.id,g]));
-        selEl.innerHTML = `<option value="ALL">Alla målvakter</option>`
+        selEl.innerHTML = `<option value="ALL">Alla m�lvakter</option>`
           + gids.map(gid=>{
               const g = goalieById.get(gid);
-              const label = g ? `${g.name} (${g.code})` : "Okänd målvakt";
+              const label = g ? `${g.name} (${g.code})` : "Ok�nd m�lvakt";
               return `<option value="${gid}">${label}</option>`;
             }).join("");
 
@@ -1326,7 +1326,7 @@
         e.preventDefault();
         const matchId = a.dataset.del;
         if (!matchId) return;
-        if (!confirm("Ta bort den här matchen?")) return;
+        if (!confirm("Ta bort den h�r matchen?")) return;
         try{
           await dbDeleteMatch(matchId);
           await refreshAll();
@@ -1354,10 +1354,10 @@
     }
   }
 
-  // ---------- Ny målvakt / ny match ----------
+  // ---------- Ny m�lvakt / ny match ----------
   async function createNewGoalie(){
     if (!CURRENT_TEAM_ID) return;
-    const code = prompt("Målvaktskod (t.ex. #30):")?.trim();
+    const code = prompt("M�lvaktskod (t.ex. #30):")?.trim();
     if (!code) return;
     const name = prompt("Namn (valfritt):")?.trim() || "";
     try{
@@ -1370,9 +1370,9 @@
     if (!CURRENT_TEAM_ID) return;
     const d = prompt("Datum (YYYY-MM-DD):", new Date().toISOString().slice(0,10))?.trim();
     if (!d) return;
-    const opp = prompt("Motståndare:")?.trim() || "";
-    const ourG   = Number(prompt("Våra mål:", "0")   || "0");
-    const theirG = Number(prompt("Deras mål:", "0")  || "0");
+    const opp = prompt("Motst�ndare:")?.trim() || "";
+    const ourG   = Number(prompt("V�ra m�l:", "0")   || "0");
+    const theirG = Number(prompt("Deras m�l:", "0")  || "0");
     let result = "";
     if (!Number.isNaN(ourG) && !Number.isNaN(theirG)){
       if (ourG > theirG) result = "V";
@@ -1408,7 +1408,7 @@
       const s = statsRows.find(r=>r.goalie_id === g.id) || {};
       return {
         goalie_id: g.id,
-        name: g.name || g.code || "(målvakt)",
+        name: g.name || g.code || "(m�lvakt)",
         code: g.code || "",
         minutes: s.minutes || 0,
         shots:   s.shots   || 0,
@@ -1430,7 +1430,7 @@
                  value="${match.date || ""}">
         </div>
         <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">Motståndare</label>
+          <label class="block text-xs text-gray-500 mb-1">Motst�ndare</label>
           <input id="edit-opp" type="text"
                  class="border rounded px-2 py-1 w-full text-sm"
                  value="${match.opponent || ""}">
@@ -1438,13 +1438,13 @@
       </div>
       <div class="flex gap-2 mt-2">
         <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">Våra mål</label>
+          <label class="block text-xs text-gray-500 mb-1">V�ra m�l</label>
           <input id="edit-our" type="number"
                  class="border rounded px-2 py-1 w-full text-sm"
                  value="${match.our_goals ?? ""}">
         </div>
         <div class="flex-1">
-          <label class="block text-xs text-gray-500 mb-1">Deras mål</label>
+          <label class="block text-xs text-gray-500 mb-1">Deras m�l</label>
           <input id="edit-their" type="number"
                  class="border rounded px-2 py-1 w-full text-sm"
                  value="${match.their_goals ?? ""}">
@@ -1457,11 +1457,11 @@
     tbl.className = "mt-3 border-t pt-2";
     tbl.innerHTML = `
       <div class="grid grid-cols-5 gap-1 text-xs text-gray-500 mb-1">
-        <div>Målvakt</div>
+        <div>M�lvakt</div>
         <div class="text-center">Min</div>
         <div class="text-center">Skott</div>
-        <div class="text-center">Mål</div>
-        <div class="text-center">Rädd%</div>
+        <div class="text-center">M�l</div>
+        <div class="text-center">R�dd%</div>
       </div>
     `;
     EDIT_ENTRIES.forEach((e,idx)=>{
@@ -1503,7 +1503,7 @@
           const sv = (s-g)/s;
           el.textContent = fmtPct(sv);
         }else{
-          el.textContent = "–";
+          el.textContent = "-";
         }
       });
     }
@@ -1527,10 +1527,10 @@
       <button type="button"
               class="px-3 py-1.5 text-xs rounded-xl border hover:bg-slate-50"
               data-editshots="${matchId}">
-        Lägg / redigera skott (skottkarta)
+        L�gg / redigera skott (skottkarta)
       </button>
       <div class="text-[11px] text-gray-500 mt-1">
-        Skottkartan visas i matchlistan. Här kan du lägga till och ta bort skott.
+        Skottkartan visas i matchlistan. H�r kan du l�gga till och ta bort skott.
       </div>
     `;
     body.appendChild(shotBtn);
@@ -1613,7 +1613,7 @@
     const time = $("#shot-time").value.trim();
     const dots = $("#shot-dots").querySelectorAll("div[data-x][data-y]");
     if (!dots.length){
-      alert("Klicka på rinken för att lägga skottposition.");
+      alert("Klicka p� rinken f�r att l�gga skottposition.");
       return;
     }
     const last = dots[dots.length-1];
@@ -1677,8 +1677,8 @@
   iceGradient.addColorStop(1, "#f1f5f9");
   ctx.fillStyle = iceGradient;
 
-  // Rink med normal rundning i hörnen
-  const cornerRadius = H * 0.18; // << mindre än tidigare
+  // Rink med normal rundning i h�rnen
+  const cornerRadius = H * 0.18; // << mindre �n tidigare
   ctx.beginPath();
   if (ctx.roundRect) {
     ctx.roundRect(0, 0, W, H, cornerRadius);
@@ -1717,7 +1717,7 @@
   const centerX = W / 2;
   const centerY = H / 2;
 
-  // Mållinjer (lite innanför kortsidorna)
+  // M�llinjer (lite innanf�r kortsidorna)
   const goalLineOffset = W * 0.06;
   ctx.strokeStyle = "#ef4444";
   ctx.lineWidth = 2;
@@ -1730,7 +1730,7 @@
   ctx.lineTo(W - goalLineOffset, H - 6);
   ctx.stroke();
 
-  // Blå linjer (ungefär 25% / 75%)
+  // Bl� linjer (ungef�r 25% / 75%)
   ctx.strokeStyle = "#3b82f6";
   ctx.lineWidth = 3;
 
@@ -1764,7 +1764,7 @@
   ctx.arc(centerX, centerY, centerCircleRadius, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Faceoff-hjälpfunktion
+  // Faceoff-hj�lpfunktion
   function drawFaceOffCircle(x, y, withCircle){
     const circleRadius = Math.min(W, H) * 0.14;
 
@@ -1802,7 +1802,7 @@
     ctx.fill();
   }
 
-  // Tekningspunkter – mer "riktiga" proportioner
+  // Tekningspunkter - mer "riktiga" proportioner
   const offX = W * 0.21;
   const offYTop = H * 0.24;
   const offYBot = H * 0.76;
@@ -1826,13 +1826,13 @@
   ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
   ctx.fill();
 
-  // Målgårdar – halvcirkel framför målet
+  // M�lg�rdar - halvcirkel framf�r m�let
   const creaseRadius = H * 0.08;
   ctx.fillStyle = "rgba(147, 197, 253, 0.5)";
   ctx.strokeStyle = "#60a5fa";
   ctx.lineWidth = 2;
 
-  // vänster
+  // v�nster
   const leftCreaseCenterX = goalLineOffset + creaseRadius * 0.8;
   ctx.beginPath();
   ctx.arc(leftCreaseCenterX, centerY, creaseRadius, -Math.PI/2, Math.PI/2);
@@ -1842,7 +1842,7 @@
   ctx.fill();
   ctx.stroke();
 
-  // höger
+  // h�ger
   const rightCreaseCenterX = W - goalLineOffset - creaseRadius * 0.8;
   ctx.beginPath();
   ctx.arc(rightCreaseCenterX, centerY, creaseRadius, Math.PI/2, -Math.PI/2);
@@ -1852,7 +1852,7 @@
   ctx.fill();
   ctx.stroke();
 
-  // Målburar (små rektanglar bakom mållinjen)
+  // M�lburar (sm� rektanglar bakom m�llinjen)
   const netWidth = W * 0.02;
   const netHeight = H * 0.18;
   ctx.fillStyle = "rgba(148, 163, 184, 0.8)";
@@ -1935,11 +1935,11 @@
 
     if (!SHOT_EDITOR_SHOTS.length){
       tbody.innerHTML =
-        `<tr><td colspan="5" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
+        `<tr><td colspan="5" class="px-2 py-2 text-center text-gray-400">Inga skott �nnu.</td></tr>`;
     } else {
       tbody.innerHTML = SHOT_EDITOR_SHOTS.map((s, idx) => {
         const g = goalieById.get(String(s.goalie_id));
-        const gName = g ? (g.name || g.code || "Målvakt") : "Målvakt";
+        const gName = g ? (g.name || g.code || "M�lvakt") : "M�lvakt";
         return `
           <tr class="border-b last:border-b-0">
             <td class="px-2 py-1">${gName}</td>
@@ -1965,14 +1965,14 @@
       SHOT_EDITOR_MATCH_ID = matchId;
       SHOT_EDITOR_SHOTS = await dbLoadShotsForMatch(matchId);
 
-      // fyll målvaktslista
+      // fyll m�lvaktslista
       const sel = $("#shot-editor-goalie");
       if (GOALIES.length){
         sel.innerHTML = GOALIES.map(g =>
-          `<option value="${g.id}">${g.name || g.code || "Målvakt"}</option>`
+          `<option value="${g.id}">${g.name || g.code || "M�lvakt"}</option>`
         ).join("");
       } else {
-        sel.innerHTML = `<option value="">Inga målvakter</option>`;
+        sel.innerHTML = `<option value="">Inga m�lvakter</option>`;
       }
 
       const modal = $("#shot-editor-modal");
@@ -2000,7 +2000,7 @@
 
     const sel = $("#shot-editor-goalie");
     if (!sel || !sel.value){
-      alert("Välj målvakt först.");
+      alert("V�lj m�lvakt f�rst.");
       return;
     }
     const goalieId = sel.value;
@@ -2044,7 +2044,7 @@
   // ---------- Import / Export ----------
   async function exportJSON(){
     if (!CURRENT_TEAM_ID){
-      alert("Du måste ha ett lag valt.");
+      alert("Du m�ste ha ett lag valt.");
       return;
     }
     try{
@@ -2073,7 +2073,7 @@
     }
   }
 
-  // Just nu gör vi säkra, läs-bara imports (loggar bara datan).
+  // Just nu g�r vi s�kra, l�s-bara imports (loggar bara datan).
   function handleImportJSON(evt){
     const file = evt.target.files?.[0];
     if (!file) return;
@@ -2081,8 +2081,8 @@
     reader.onload = () => {
       try{
         const data = JSON.parse(reader.result);
-        console.log("JSON import (endast logg i den här versionen):", data);
-        alert("JSON läst in och loggad i konsolen, men import till databasen är inte aktiverad ännu.");
+        console.log("JSON import (endast logg i den h�r versionen):", data);
+        alert("JSON l�st in och loggad i konsolen, men import till databasen �r inte aktiverad �nnu.");
       } catch(e){
         showError("import-json", e);
       } finally {
@@ -2097,8 +2097,8 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      console.log("CSV import (endast logg i den här versionen):", reader.result);
-      alert("CSV läst in och loggad i konsolen, men import till databasen är inte aktiverad ännu.");
+      console.log("CSV import (endast logg i den h�r versionen):", reader.result);
+      alert("CSV l�st in och loggad i konsolen, men import till databasen �r inte aktiverad �nnu.");
       evt.target.value = "";
     };
     reader.readAsText(file, "utf-8");
@@ -2135,7 +2135,7 @@
     $("#auth-signin").onclick = ()=>handleAuth("signin");
     $("#auth-signup").onclick = ()=>handleAuth("signup");
 
-    // målvakter & matcher
+    // m�lvakter & matcher
     $("#btn-new-goalie").onclick = createNewGoalie;
     $("#btn-new-match").onclick  = createNewMatch;
 
