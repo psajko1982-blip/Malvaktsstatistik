@@ -1159,7 +1159,7 @@
       const cy = pad + (h-2*pad)*(s.y ?? 0.5);
       let color = "#0f766e";
       const r = String(s.result||"").toLowerCase();
-      if (r.startsWith("goal")) color = "#ef4444";
+      if (r.startsWith("goal")) color = "#c026d3";
       else if (r.startsWith("miss")) color = "#6b7280";
       else if (r.startsWith("post")) color = "#f97316";
 
@@ -1186,7 +1186,7 @@
     el.innerHTML = `
       <div class="flex flex-wrap gap-3">
         <div class="flex items-center gap-1 text-xs">
-          <span class="inline-block w-3 h-3 rounded-full bg-red-500"></span> Mål: ${goals}
+          <span class="inline-block w-3 h-3 rounded-full bg-fuchsia-500"></span> Mål: ${goals}
         </div>
         <div class="flex items-center gap-1 text-xs">
           <span class="inline-block w-3 h-3 rounded-full bg-teal-700"></span> Räddn: ${saves}
@@ -2035,13 +2035,13 @@
 
   // ----- SKOTT MED GLOW -----
   const colorMap = {
-    goal: "#ef4444",
+    goal: "#c026d3",
     save: "#10b981",
     miss: "#6b7280",
     post: "#f59e0b"
   };
   const glowMap = {
-    goal: "rgba(239, 68, 68, 0.35)",
+    goal: "rgba(192, 38, 211, 0.35)",
     save: "rgba(16, 185, 129, 0.35)",
     miss: "rgba(107, 114, 128, 0.30)",
     post: "rgba(245, 158, 11, 0.35)"
