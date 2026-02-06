@@ -443,6 +443,13 @@
         </select>
       </div>
       <div>
+        <label class="block text-xs text-gray-500 mb-1">Vårt mål</label>
+        <button id="shot-editor-goal-toggle"
+                class="px-2 py-1 border rounded-lg text-xs hover:bg-slate-50">
+          Vårt mål: Höger
+        </button>
+      </div>
+      <div>
         <label class="block text-xs text-gray-500 mb-1">Skottyp</label>
         <select id="shot-editor-type" class="border rounded px-2 py-1 text-sm">
           <option value="">-</option>
@@ -970,6 +977,16 @@
     }
     link.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
     link.classList.remove("pointer-events-none","opacity-50");
+  }
+
+  function goalSideLabel(isRight){
+    return isRight ? "Vårt mål: Höger" : "Vårt mål: Vänster";
+  }
+
+  async function setOurGoalRight(matchId, isRight){
+    await dbUpdateMatch(matchId, { our_goal_right_p1: isRight });
+    const m = window.__match_map?.get(matchId);
+    if (m) m.our_goal_right_p1 = isRight;
   }
 
   function parseHomeAway(opponent){
@@ -1684,7 +1701,7 @@
           </button>
         </div>
         <div id="shots-wrap-${m.id}" class="hidden mt-2">
-          <div class="flex items-center gap-2 mb-2">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
             <label class="flex items-center gap-1 text-xs">
               <input type="checkbox" data-heatmap="${m.id}">
               Heatmap
@@ -1702,6 +1719,10 @@
               <option value="3">3</option>
               <option value="OT">OT</option>
             </select>
+            <button class="text-xs px-2 py-1 border rounded-lg hover:bg-slate-50"
+                    data-goal-toggle="${m.id}">
+              ${goalSideLabel(m.our_goal_right_p1 ?? true)}
+            </button>
           </div>
           <div class="relative w-full aspect-[2/1]">
             <div id="rink-${m.id}"
@@ -1790,9 +1811,31 @@
         perEl.onchange = draw;
         const heatChk = document.querySelector('[data-heatmap="'+matchId+'"]');
         if (heatChk) heatChk.onchange = draw;
+        panel.__draw = draw;
         draw();
       });
       wrap.__hasShotsHandler__ = true;
+    }
+
+    // Goal side toggle
+    if (!wrap.__hasGoalSideHandler__){
+      wrap.addEventListener("click", async (e)=>{
+        const btn = e.target.closest("[data-goal-toggle]");
+        if (!btn) return;
+        const matchId = btn.dataset.goalToggle;
+        if (!matchId) return;
+        const match = window.__match_map?.get(matchId);
+        const next = !(match?.our_goal_right_p1 ?? true);
+        try{
+          await setOurGoalRight(matchId, next);
+          btn.textContent = goalSideLabel(next);
+          const panel = document.getElementById("shots-wrap-"+matchId);
+          if (panel && panel.__draw) panel.__draw();
+        } catch(err){
+          showError("goal-side-toggle", err);
+        }
+      });
+      wrap.__hasGoalSideHandler__ = true;
     }
 
     // Delete handler
@@ -2307,6 +2350,8 @@
       SHOT_EDITOR_SHOTS = await dbLoadShotsForMatch(matchId);
       const mm = window.__match_map?.get(matchId);
       SHOT_EDITOR_OUR_RIGHT_P1 = (mm?.our_goal_right_p1 ?? true);
+      const gt = $("#shot-editor-goal-toggle");
+      if (gt) gt.textContent = goalSideLabel(SHOT_EDITOR_OUR_RIGHT_P1);
 
       // fyll målvaktslista
       const sel = $("#shot-editor-goalie");
@@ -2333,6 +2378,8 @@
     SHOT_EDITOR_MATCH_ID = null;
     SHOT_EDITOR_SHOTS = [];
     SHOT_EDITOR_OUR_RIGHT_P1 = true;
+    const gt = $("#shot-editor-goal-toggle");
+    if (gt) gt.textContent = goalSideLabel(true);
   }
 
   function handleShotEditorCanvasClick(e){
@@ -2505,6 +2552,23 @@
     $("#shot-editor-close").onclick  = closeShotEditor;
     $("#shot-editor-cancel").onclick = closeShotEditor;
     $("#shot-editor-save").onclick   = saveShotEditor;
+    const goalToggle = $("#shot-editor-goal-toggle");
+    if (goalToggle){
+      goalToggle.onclick = async () => {
+        if (!SHOT_EDITOR_MATCH_ID) return;
+        const next = !SHOT_EDITOR_OUR_RIGHT_P1;
+        try{
+          await setOurGoalRight(SHOT_EDITOR_MATCH_ID, next);
+          SHOT_EDITOR_OUR_RIGHT_P1 = next;
+          goalToggle.textContent = goalSideLabel(next);
+          renderShotEditor();
+          const panel = document.getElementById("shots-wrap-"+SHOT_EDITOR_MATCH_ID);
+          if (panel && panel.__draw) panel.__draw();
+        } catch(err){
+          showError("goal-side-toggle", err);
+        }
+      };
+    }
     initTargetGrid("shot-editor-target-grid","shot-editor-target");
     const seCanvas = $("#shot-editor-canvas");
     if (seCanvas) seCanvas.addEventListener("click", handleShotEditorCanvasClick);
