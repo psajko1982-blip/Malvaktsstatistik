@@ -292,6 +292,43 @@
                placeholder="t.ex. 12:34">
       </div>
     </div>
+    <div class="mt-3 grid grid-cols-3 gap-2 text-xs">
+      <div class="col-span-2">
+        <label class="block text-[11px] text-gray-500 mb-1">Taggar</label>
+        <div class="flex flex-wrap gap-2">
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-tag" value="frilage"> Friläge</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-tag" value="retur"> Retur</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-tag" value="skymd"> Skymd</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-tag" value="block"> Block</label>
+        </div>
+      </div>
+      <div>
+        <label class="block text-[11px] text-gray-500 mb-1">Skottyp</label>
+        <select id="shot-type" class="border rounded px-2 py-1 w-full text-xs">
+          <option value="">-</option>
+          <option value="handled">Handledsskott</option>
+          <option value="slagskott">Slagskott</option>
+          <option value="dragskott">Dragskott</option>
+          <option value="direkt">Direktskott</option>
+          <option value="backhand">Backhand</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-3 text-xs">
+      <label class="block text-[11px] text-gray-500 mb-1">Skott på mål (ruta)</label>
+      <div id="shot-target-grid" class="grid grid-cols-3 gap-1 w-32">
+        <button type="button" data-zone="1" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">1</button>
+        <button type="button" data-zone="2" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">2</button>
+        <button type="button" data-zone="3" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">3</button>
+        <button type="button" data-zone="4" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">4</button>
+        <button type="button" data-zone="5" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">5</button>
+        <button type="button" data-zone="6" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">6</button>
+        <button type="button" data-zone="7" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">7</button>
+        <button type="button" data-zone="8" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">8</button>
+        <button type="button" data-zone="9" class="shot-zone-btn border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">9</button>
+      </div>
+      <input id="shot-target" type="hidden" value="">
+    </div>
 
     <div class="mt-4 flex justify-end gap-2">
       <button type="button"
@@ -405,6 +442,41 @@
           <option value="OT">OT</option>
         </select>
       </div>
+      <div>
+        <label class="block text-xs text-gray-500 mb-1">Skottyp</label>
+        <select id="shot-editor-type" class="border rounded px-2 py-1 text-sm">
+          <option value="">-</option>
+          <option value="handled">Handledsskott</option>
+          <option value="slagskott">Slagskott</option>
+          <option value="dragskott">Dragskott</option>
+          <option value="direkt">Direktskott</option>
+          <option value="backhand">Backhand</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="block text-xs text-gray-500">Taggar</span>
+        <div class="flex flex-wrap gap-2 text-sm">
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-editor-tag" value="frilage"> Friläge</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-editor-tag" value="retur"> Retur</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-editor-tag" value="skymd"> Skymd</label>
+          <label class="flex items-center gap-1"><input type="checkbox" class="shot-editor-tag" value="block"> Block</label>
+        </div>
+      </div>
+      <div>
+        <span class="block text-xs text-gray-500 mb-1">Skott på mål (ruta)</span>
+        <div id="shot-editor-target-grid" class="grid grid-cols-3 gap-1 w-32">
+          <button type="button" data-zone="1" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">1</button>
+          <button type="button" data-zone="2" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">2</button>
+          <button type="button" data-zone="3" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">3</button>
+          <button type="button" data-zone="4" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">4</button>
+          <button type="button" data-zone="5" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">5</button>
+          <button type="button" data-zone="6" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">6</button>
+          <button type="button" data-zone="7" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">7</button>
+          <button type="button" data-zone="8" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">8</button>
+          <button type="button" data-zone="9" class="shot-editor-zone border rounded h-6 text-[10px] bg-slate-50 hover:bg-slate-100">9</button>
+        </div>
+        <input id="shot-editor-target" type="hidden" value="">
+      </div>
 
       <p class="text-xs text-gray-500 flex-1">
         Klicka på isen för att lägga till skott. Välj målvakt och resultat ovan.  
@@ -429,6 +501,9 @@
             <th class="px-2 py-1 text-left">Målvakt</th>
             <th class="px-2 py-1 text-left">Resultat</th>
             <th class="px-2 py-1 text-left">Period</th>
+            <th class="px-2 py-1 text-left">Typ</th>
+            <th class="px-2 py-1 text-left">Taggar</th>
+            <th class="px-2 py-1 text-left">Målruta</th>
             <th class="px-2 py-1 text-left">X</th>
             <th class="px-2 py-1 text-left">Y</th>
             <th class="px-2 py-1"></th>
@@ -767,7 +842,10 @@
       period: s.period || null,
       time: s.time || null,
       x: s.x,
-      y: s.y
+      y: s.y,
+      tags: s.tags || null,
+      shot_type: s.shot_type || null,
+      target_zone: s.target_zone || null
     }));
 
     const { error: insErr } = await supabaseClient
@@ -915,6 +993,46 @@
     const base = stripHomeAway(opponent);
     if (!homeAway) return base;
     return base ? `${base} (${homeAway})` : `(${homeAway})`;
+  }
+
+  function formatTargetZone(z){
+    const n = Number(z);
+    if (!Number.isFinite(n) || n < 1 || n > 9) return "-";
+    const map = ["TL","TC","TR","ML","MC","MR","BL","BC","BR"];
+    return map[n-1];
+  }
+
+  function collectTags(selector){
+    return $$(selector).filter(cb=>cb.checked).map(cb=>cb.value);
+  }
+
+  function initTargetGrid(gridId, inputId){
+    const grid = document.getElementById(gridId);
+    const input = document.getElementById(inputId);
+    if (!grid || !input) return;
+    grid.addEventListener("click", (e)=>{
+      const btn = e.target.closest("button[data-zone]");
+      if (!btn) return;
+      const zone = btn.dataset.zone;
+      input.value = zone;
+      grid.querySelectorAll("button[data-zone]").forEach(b=>{
+        b.classList.remove("bg-sky-500","text-white");
+        if (!b.classList.contains("bg-slate-50")) b.classList.add("bg-slate-50");
+      });
+      btn.classList.remove("bg-slate-50");
+      btn.classList.add("bg-sky-500","text-white");
+    });
+  }
+
+  function clearTargetGrid(gridId, inputId){
+    const grid = document.getElementById(gridId);
+    const input = document.getElementById(inputId);
+    if (!grid || !input) return;
+    input.value = "";
+    grid.querySelectorAll("button[data-zone]").forEach(b=>{
+      b.classList.remove("bg-sky-500","text-white");
+      if (!b.classList.contains("bg-slate-50")) b.classList.add("bg-slate-50");
+    });
   }
 
   function periodToDb(value){
@@ -1930,6 +2048,9 @@
     $("#shot-result").value = "save";
     $("#shot-period").value = "1";
     $("#shot-time").value = "";
+    $("#shot-type").value = "";
+    $$(".shot-tag").forEach(cb=>cb.checked=false);
+    clearTargetGrid("shot-target-grid","shot-target");
     $("#shot-dots").innerHTML = "";
     const mm = $("#shot-modal");
     mm.classList.remove("hidden");
@@ -1949,6 +2070,9 @@
     const res  = $("#shot-result").value;
     const per  = $("#shot-period").value;
     const time = $("#shot-time").value.trim();
+    const tags = collectTags(".shot-tag");
+    const shotType = $("#shot-type").value || null;
+    const targetZone = parseInt($("#shot-target").value || "", 10);
     const dots = $("#shot-dots").querySelectorAll("div[data-x][data-y]");
     if (!dots.length){
       alert("Klicka på rinken för att lägga skottposition.");
@@ -1964,6 +2088,9 @@
         result: res,
         period: periodToDb(per),
         time, x, y
+        , tags: tags.length ? tags : null
+        , shot_type: shotType
+        , target_zone: Number.isFinite(targetZone) ? targetZone : null
       });
       closeShotModal();
       window.__shots_cache && window.__shots_cache.delete(CURRENT_SHOT_MATCH);
@@ -2094,7 +2221,7 @@
 
     if (!SHOT_EDITOR_SHOTS.length){
       tbody.innerHTML =
-        `<tr><td colspan="6" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
+        `<tr><td colspan="9" class="px-2 py-2 text-center text-gray-400">Inga skott ännu.</td></tr>`;
     } else {
       tbody.innerHTML = SHOT_EDITOR_SHOTS.map((s, idx) => {
         const g = goalieById.get(String(s.goalie_id));
@@ -2104,6 +2231,9 @@
             <td class="px-2 py-1">${gName}</td>
             <td class="px-2 py-1">${s.result}</td>
             <td class="px-2 py-1">${periodLabel(s.period)}</td>
+            <td class="px-2 py-1">${s.shot_type || "-"}</td>
+            <td class="px-2 py-1">${(s.tags || []).join(", ") || "-"}</td>
+            <td class="px-2 py-1">${formatTargetZone(s.target_zone)}</td>
             <td class="px-2 py-1">${(s.x ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1">${(s.y ?? 0).toFixed(3)}</td>
             <td class="px-2 py-1 text-right">
@@ -2172,7 +2302,10 @@
     const perSel = $("#shot-editor-period");
     const period = perSel ? perSel.value : "1";
     const periodDb = periodToDb(period);
-          const xStore = mapShotXForStorage(xNorm, periodLabel(periodDb), SHOT_EDITOR_OUR_RIGHT_P1);
+    const xStore = mapShotXForStorage(xNorm, periodLabel(periodDb), SHOT_EDITOR_OUR_RIGHT_P1);
+    const tags = collectTags(".shot-editor-tag");
+    const shotType = $("#shot-editor-type").value || null;
+    const targetZone = parseInt($("#shot-editor-target").value || "", 10);
 
     SHOT_EDITOR_SHOTS.push({
       match_id: SHOT_EDITOR_MATCH_ID,
@@ -2182,7 +2315,10 @@
       period: periodDb,
       time: null,
       x: xStore,
-      y: yNorm
+      y: yNorm,
+      tags: tags.length ? tags : null,
+      shot_type: shotType,
+      target_zone: Number.isFinite(targetZone) ? targetZone : null
     });
 
     renderShotEditor();
@@ -2312,11 +2448,13 @@
     // shot modal
     initShotRink();
     $("#shot-save").onclick = saveShot;
+    initTargetGrid("shot-target-grid","shot-target");
 
     // shot editor
     $("#shot-editor-close").onclick  = closeShotEditor;
     $("#shot-editor-cancel").onclick = closeShotEditor;
     $("#shot-editor-save").onclick   = saveShotEditor;
+    initTargetGrid("shot-editor-target-grid","shot-editor-target");
     const seCanvas = $("#shot-editor-canvas");
     if (seCanvas) seCanvas.addEventListener("click", handleShotEditorCanvasClick);
     const seList = $("#shot-editor-list");
