@@ -449,6 +449,17 @@
           Vårt mål: Höger
         </button>
       </div>
+      <div class="flex items-center gap-2 text-xs">
+        <button id="shot-editor-apply"
+                class="px-2 py-1 border rounded-lg hover:bg-slate-50">
+          Uppdatera valt skott
+        </button>
+        <button id="shot-editor-clear"
+                class="px-2 py-1 border rounded-lg hover:bg-slate-50">
+          Avmarkera
+        </button>
+        <span id="shot-editor-selected" class="text-gray-500">Inget valt</span>
+      </div>
       <div>
         <label class="block text-xs text-gray-500 mb-1">Skottyp</label>
         <select id="shot-editor-type" class="border rounded px-2 py-1 text-sm">
@@ -1028,6 +1039,68 @@
     if (s.tags && s.tags.length) parts.push(`Taggar: ${s.tags.join(", ")}`);
     if (s.target_zone) parts.push(`Målruta: ${formatTargetZone(s.target_zone)}`);
     return parts.join(" | ");
+  }
+
+  function setShotEditorSelection(idx){
+    SHOT_EDITOR_SELECTED_IDX = idx;
+    const sel = $("#shot-editor-selected");
+    if (!sel) return;
+    if (idx == null){
+      sel.textContent = "Inget valt";
+    } else {
+      sel.textContent = `Valt skott: #${idx+1}`;
+    }
+  }
+
+  function loadShotEditorFields(shot){
+    if (!shot) return;
+    const goalieSel = $("#shot-editor-goalie");
+    if (goalieSel) goalieSel.value = shot.goalie_id;
+    const res = String(shot.result || "").toLowerCase();
+    const resRadio = document.querySelector(`input[name="shot-result"][value="${res}"]`);
+    if (resRadio) resRadio.checked = true;
+    const per = $("#shot-editor-period");
+    if (per) per.value = periodLabel(shot.period);
+    const type = $("#shot-editor-type");
+    if (type) type.value = shot.shot_type || "";
+    $$(".shot-editor-tag").forEach(cb=>{
+      cb.checked = (shot.tags || []).includes(cb.value);
+    });
+    const target = $("#shot-editor-target");
+    if (target){
+      target.value = shot.target_zone ? String(shot.target_zone) : "";
+      // sync grid highlight
+      const grid = $("#shot-editor-target-grid");
+      if (grid){
+        grid.querySelectorAll("button[data-zone]").forEach(b=>{
+          b.classList.remove("bg-sky-500","text-white");
+          if (!b.classList.contains("bg-slate-50")) b.classList.add("bg-slate-50");
+        });
+        if (target.value){
+          const btn = grid.querySelector(`button[data-zone="${target.value}"]`);
+          if (btn){
+            btn.classList.remove("bg-slate-50");
+            btn.classList.add("bg-sky-500","text-white");
+          }
+        }
+      }
+    }
+  }
+
+  function applyShotEditorFields(){
+    if (SHOT_EDITOR_SELECTED_IDX == null) return;
+    const s = SHOT_EDITOR_SHOTS[SHOT_EDITOR_SELECTED_IDX];
+    if (!s) return;
+    const per = $("#shot-editor-period");
+    const period = per ? per.value : "1";
+    const periodDb = periodToDb(period);
+    const type = $("#shot-editor-type")?.value || null;
+    const tags = collectTags(".shot-editor-tag");
+    const targetZone = parseInt($("#shot-editor-target")?.value || "", 10);
+    s.period = periodDb;
+    s.shot_type = type;
+    s.tags = tags.length ? tags : null;
+    s.target_zone = Number.isFinite(targetZone) ? targetZone : null;
   }
 
   function ensureShotTooltip(rinkEl){
@@ -2222,8 +2295,9 @@
   let SHOT_EDITOR_MATCH_ID = null;
   let SHOT_EDITOR_SHOTS = [];
   let SHOT_EDITOR_OUR_RIGHT_P1 = true;
+  let SHOT_EDITOR_SELECTED_IDX = null;
 
-    function renderShotEditor(){
+  function renderShotEditor(){
   const canvas = $("#shot-editor-canvas");
   if (!canvas) return;
 
@@ -2317,8 +2391,8 @@
   });
 
   // ----- LISTA MED SKOTT (samma som tidigare) -----
-  const tbody = $("#shot-editor-list");
-  if (tbody){
+    const tbody = $("#shot-editor-list");
+    if (tbody){
     const goalieById = new Map(GOALIES.map(g => [String(g.id), g]));
 
     if (!SHOT_EDITOR_SHOTS.length){
@@ -2328,8 +2402,9 @@
       tbody.innerHTML = SHOT_EDITOR_SHOTS.map((s, idx) => {
         const g = goalieById.get(String(s.goalie_id));
         const gName = g ? (g.name || g.code || "Målvakt") : "Målvakt";
+        const selClass = (SHOT_EDITOR_SELECTED_IDX === idx) ? " bg-slate-100" : "";
         return `
-          <tr class="border-b last:border-b-0">
+          <tr class="border-b last:border-b-0${selClass}" data-idx="${idx}">
             <td class="px-2 py-1">${gName}</td>
             <td class="px-2 py-1">${s.result}</td>
             <td class="px-2 py-1">${periodLabel(s.period)}</td>
@@ -2346,9 +2421,10 @@
           </tr>
         `;
       }).join("");
+      }
     }
+    setShotEditorSelection(SHOT_EDITOR_SELECTED_IDX);
   }
-}
 
 
 
@@ -2360,6 +2436,7 @@
       SHOT_EDITOR_OUR_RIGHT_P1 = (mm?.our_goal_right_p1 ?? true);
       const gt = $("#shot-editor-goal-toggle");
       if (gt) gt.textContent = goalSideLabel(SHOT_EDITOR_OUR_RIGHT_P1);
+      SHOT_EDITOR_SELECTED_IDX = null;
 
       // fyll målvaktslista
       const sel = $("#shot-editor-goalie");
@@ -2386,6 +2463,7 @@
     SHOT_EDITOR_MATCH_ID = null;
     SHOT_EDITOR_SHOTS = [];
     SHOT_EDITOR_OUR_RIGHT_P1 = true;
+    SHOT_EDITOR_SELECTED_IDX = null;
     const gt = $("#shot-editor-goal-toggle");
     if (gt) gt.textContent = goalSideLabel(true);
   }
@@ -2413,29 +2491,54 @@
     const shotType = $("#shot-editor-type").value || null;
     const targetZone = parseInt($("#shot-editor-target").value || "", 10);
 
-    SHOT_EDITOR_SHOTS.push({
-      match_id: SHOT_EDITOR_MATCH_ID,
-      team_id: CURRENT_TEAM_ID,
-      goalie_id: goalieId,
-      result,
-      period: periodDb,
-      time: null,
-      x: xStore,
-      y: yNorm,
-      tags: tags.length ? tags : null,
-      shot_type: shotType,
-      target_zone: Number.isFinite(targetZone) ? targetZone : null
-    });
+    if (SHOT_EDITOR_SELECTED_IDX != null){
+      const s = SHOT_EDITOR_SHOTS[SHOT_EDITOR_SELECTED_IDX];
+      if (s){
+        s.goalie_id = goalieId;
+        s.result = result;
+        s.period = periodDb;
+        s.x = xStore;
+        s.y = yNorm;
+        s.tags = tags.length ? tags : null;
+        s.shot_type = shotType;
+        s.target_zone = Number.isFinite(targetZone) ? targetZone : null;
+      }
+    } else {
+      SHOT_EDITOR_SHOTS.push({
+        match_id: SHOT_EDITOR_MATCH_ID,
+        team_id: CURRENT_TEAM_ID,
+        goalie_id: goalieId,
+        result,
+        period: periodDb,
+        time: null,
+        x: xStore,
+        y: yNorm,
+        tags: tags.length ? tags : null,
+        shot_type: shotType,
+        target_zone: Number.isFinite(targetZone) ? targetZone : null
+      });
+    }
 
     renderShotEditor();
   }
 
   function handleShotEditorListClick(e){
     const btn = e.target.closest("[data-del-idx]");
-    if (!btn) return;
-    const idx = parseInt(btn.dataset.delIdx,10);
+    if (btn){
+      const idx = parseInt(btn.dataset.delIdx,10);
+      if (Number.isNaN(idx)) return;
+      SHOT_EDITOR_SHOTS.splice(idx,1);
+      if (SHOT_EDITOR_SELECTED_IDX === idx) SHOT_EDITOR_SELECTED_IDX = null;
+      if (SHOT_EDITOR_SELECTED_IDX != null && SHOT_EDITOR_SELECTED_IDX > idx) SHOT_EDITOR_SELECTED_IDX -= 1;
+      renderShotEditor();
+      return;
+    }
+    const row = e.target.closest("tr[data-idx]");
+    if (!row) return;
+    const idx = parseInt(row.dataset.idx,10);
     if (Number.isNaN(idx)) return;
-    SHOT_EDITOR_SHOTS.splice(idx,1);
+    SHOT_EDITOR_SELECTED_IDX = idx;
+    loadShotEditorFields(SHOT_EDITOR_SHOTS[idx]);
     renderShotEditor();
   }
 
@@ -2560,6 +2663,21 @@
     $("#shot-editor-close").onclick  = closeShotEditor;
     $("#shot-editor-cancel").onclick = closeShotEditor;
     $("#shot-editor-save").onclick   = saveShotEditor;
+    const applyBtn = $("#shot-editor-apply");
+    if (applyBtn){
+      applyBtn.onclick = () => {
+        applyShotEditorFields();
+        renderShotEditor();
+      };
+    }
+    const clearBtn = $("#shot-editor-clear");
+    if (clearBtn){
+      clearBtn.onclick = () => {
+        SHOT_EDITOR_SELECTED_IDX = null;
+        setShotEditorSelection(null);
+        renderShotEditor();
+      };
+    }
     const goalToggle = $("#shot-editor-goal-toggle");
     if (goalToggle){
       goalToggle.onclick = async () => {
