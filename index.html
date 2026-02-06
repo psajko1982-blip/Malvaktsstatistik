@@ -1412,11 +1412,11 @@
             <select id="shots-filter-${m.id}"
                     class="border rounded px-2 py-1 text-sm"></select>
           </div>
-          <div class="relative max-w-3xl mx-auto">
+          <div class="relative w-full aspect-[2/1]">
             <div id="rink-${m.id}"
-                 class="w-full h-48 md:h-82 rounded-xl border bg-white"></div>
+                 class="w-full h-full rounded-xl border bg-white"></div>
             <canvas id="heat-${m.id}"
-                    class="absolute inset-0 w-full h-48 md:h-82 pointer-events-none hidden"></canvas>
+                    class="absolute inset-0 w-full h-full pointer-events-none hidden"></canvas>
           </div>
           <div id="legend-${m.id}"
                class="mt-2 text-xs text-gray-600"></div>
