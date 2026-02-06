@@ -60,12 +60,30 @@
     <div class="max-w-5xl mx-auto px-4 py-4">
 
       <!-- Team / date row -->
-      <div class="flex flex-wrap items-center gap-3 mb-4">
-        <div>
-          <label class="block text-xs text-slate-500 mb-1">Mitt lag</label>
-          <select id="team-select"
-                  class="rounded-xl border border-slate-300 px-3 py-1.5 text-sm bg-white min-w-[200px]">
-          </select>
+      <div class="flex flex-wrap items-end gap-3 mb-4">
+        <div class="flex items-end gap-3">
+          <div id="team-logo-wrap"
+               class="w-12 h-12 rounded-xl bg-slate-200 overflow-hidden flex items-center justify-center border border-slate-300">
+            <img id="team-logo" class="w-full h-full object-cover hidden" alt="Team logo">
+            <div id="team-logo-fallback" class="text-sm font-bold text-slate-600">MV</div>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Mitt lag</label>
+            <select id="team-select"
+                    class="rounded-xl border border-slate-300 px-3 py-1.5 text-sm bg-white min-w-[220px]">
+            </select>
+            <div class="mt-1 flex items-center gap-2 text-[11px] text-slate-500">
+              <button id="btn-upload-logo"
+                      class="px-2 py-1 border rounded-lg hover:bg-slate-50">
+                Ladda upp logga
+              </button>
+              <button id="btn-remove-logo"
+                      class="px-2 py-1 border rounded-lg hover:bg-slate-50">
+                Ta bort
+              </button>
+              <input id="team-logo-input" type="file" accept="image/*" class="hidden">
+            </div>
+          </div>
         </div>
         <button id="btn-new-team"
                 class="text-xs px-3 py-1.5 border border-slate-300 rounded-xl bg-white hover:bg-slate-50">
@@ -603,6 +621,7 @@
   // ---------- Auth ----------
   let CURRENT_USER  = null;
   let CURRENT_TEAM_ID = null;
+  let CURRENT_TEAM = null;
   let GOALIES = [];
 
   async function refreshUser() {
@@ -692,6 +711,14 @@
       .from("teams").insert([{ name }]).select().single();
     if (error) throw error;
     return data;
+  }
+
+  async function dbUpdateTeam(id, payload){
+    const { error } = await supabaseClient
+      .from("teams")
+      .update(payload)
+      .eq("id", id);
+    if (error) throw error;
   }
 
   async function dbGoalies(teamId){
@@ -940,6 +967,8 @@
       }
 
       if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
+      CURRENT_TEAM = teams.find(t => t.id === CURRENT_TEAM_ID) || teams[0] || null;
+      renderTeamLogo(CURRENT_TEAM);
       updateCompareLink();
 
       sel.innerHTML = "";
@@ -953,6 +982,8 @@
 
       sel.onchange = async () => {
         CURRENT_TEAM_ID = sel.value;
+        CURRENT_TEAM = teams.find(t => t.id === CURRENT_TEAM_ID) || null;
+        renderTeamLogo(CURRENT_TEAM);
         updateCompareLink();
         try {
           await refreshAll();
@@ -967,6 +998,8 @@
         try {
           const t = await dbCreateTeam(name);
           CURRENT_TEAM_ID = t.id;
+          CURRENT_TEAM = t;
+          renderTeamLogo(CURRENT_TEAM);
           updateCompareLink();
           await initTeams();
           await refreshAll();
@@ -996,6 +1029,54 @@
     }
     link.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
     link.classList.remove("pointer-events-none","opacity-50");
+  }
+
+  function teamInitials(name){
+    const n = String(name || "").trim();
+    if (!n) return "MV";
+    const parts = n.split(/\s+/).slice(0,2);
+    return parts.map(p=>p[0]).join("").toUpperCase();
+  }
+
+  function renderTeamLogo(team){
+    const img = $("#team-logo");
+    const fallback = $("#team-logo-fallback");
+    if (!img || !fallback) return;
+    if (team && team.logo_url){
+      img.src = team.logo_url;
+      img.classList.remove("hidden");
+      fallback.classList.add("hidden");
+    } else {
+      img.classList.add("hidden");
+      fallback.classList.remove("hidden");
+      fallback.textContent = teamInitials(team?.name);
+    }
+    img.onerror = () => {
+      img.classList.add("hidden");
+      fallback.classList.remove("hidden");
+      fallback.textContent = teamInitials(team?.name);
+    };
+  }
+
+  async function uploadTeamLogo(file){
+    if (!CURRENT_TEAM_ID || !file) return;
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const path = `${CURRENT_TEAM_ID}.${ext}`;
+    const { error } = await supabaseClient.storage
+      .from("team-logos")
+      .upload(path, file, { upsert: true, cacheControl: "3600" });
+    if (error) throw error;
+    const url = `${SUPABASE_URL}/storage/v1/object/public/team-logos/${encodeURIComponent(path)}`;
+    await dbUpdateTeam(CURRENT_TEAM_ID, { logo_url: url });
+    if (CURRENT_TEAM) CURRENT_TEAM.logo_url = url;
+    renderTeamLogo(CURRENT_TEAM);
+  }
+
+  async function clearTeamLogo(){
+    if (!CURRENT_TEAM_ID) return;
+    await dbUpdateTeam(CURRENT_TEAM_ID, { logo_url: null });
+    if (CURRENT_TEAM) CURRENT_TEAM.logo_url = null;
+    renderTeamLogo(CURRENT_TEAM);
   }
 
   function goalSideLabel(isRight){
@@ -2678,6 +2759,32 @@
     // målvakter & matcher
     $("#btn-new-goalie").onclick = createNewGoalie;
     $("#btn-new-match").onclick  = createNewMatch;
+    const logoInput = $("#team-logo-input");
+    const logoBtn = $("#btn-upload-logo");
+    const logoRemove = $("#btn-remove-logo");
+    if (logoBtn && logoInput){
+      logoBtn.onclick = () => logoInput.click();
+      logoInput.onchange = async () => {
+        const file = logoInput.files?.[0];
+        if (!file) return;
+        try{
+          await uploadTeamLogo(file);
+        } catch(e){
+          showError("upload-logo", e);
+        } finally {
+          logoInput.value = "";
+        }
+      };
+    }
+    if (logoRemove){
+      logoRemove.onclick = async () => {
+        try{
+          await clearTeamLogo();
+        } catch(e){
+          showError("remove-logo", e);
+        }
+      };
+    }
 
     // edit modal
     $("#edit-save").onclick = saveEditModal;
