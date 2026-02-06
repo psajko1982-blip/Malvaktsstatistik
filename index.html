@@ -138,19 +138,26 @@
       </div>
 
       <!-- Tabs -->
-      <div class="mb-3 border-b border-slate-200 flex gap-4 text-sm">
-        <button data-tab="tab-matches"
-                class="tab-btn border-b-2 border-sky-500 text-sky-600 pb-2 -mb-px">
-          Matcher
-        </button>
-        <button data-tab="tab-goalies"
-                class="tab-btn pb-2 text-slate-500">
-          Målvakter
-        </button>
-        <button data-tab="tab-import"
-                class="tab-btn pb-2 text-slate-500">
-          Import / Export
-        </button>
+      <div class="mb-3 border-b border-slate-200 flex items-center justify-between text-sm">
+        <div class="flex gap-4">
+          <button data-tab="tab-matches"
+                  class="tab-btn border-b-2 border-sky-500 text-sky-600 pb-2 -mb-px">
+            Matcher
+          </button>
+          <button data-tab="tab-goalies"
+                  class="tab-btn pb-2 text-slate-500">
+            Målvakter
+          </button>
+          <button data-tab="tab-import"
+                  class="tab-btn pb-2 text-slate-500">
+            Import / Export
+          </button>
+        </div>
+        <a id="compare-link"
+           class="pb-2 text-slate-500 hover:text-slate-700 underline"
+           href="compare.html">
+          Jämför målvakter
+        </a>
       </div>
 
       <!-- Tab: Matches -->
@@ -829,6 +836,7 @@
       }
 
       if (!CURRENT_TEAM_ID) CURRENT_TEAM_ID = teams[0].id;
+      updateCompareLink();
 
       sel.innerHTML = "";
       teams.forEach(t => {
@@ -841,6 +849,7 @@
 
       sel.onchange = async () => {
         CURRENT_TEAM_ID = sel.value;
+        updateCompareLink();
         try {
           await refreshAll();
         } catch (e) {
@@ -854,6 +863,7 @@
         try {
           const t = await dbCreateTeam(name);
           CURRENT_TEAM_ID = t.id;
+          updateCompareLink();
           await initTeams();
           await refreshAll();
         } catch (e) {
@@ -870,6 +880,18 @@
     const f = $("#filter-from").value || null;
     const t = $("#filter-to").value   || null;
     return { from: f, to: t };
+  }
+
+  function updateCompareLink(){
+    const link = document.getElementById("compare-link");
+    if (!link) return;
+    if (!CURRENT_TEAM_ID){
+      link.href = "compare.html";
+      link.classList.add("pointer-events-none","opacity-50");
+      return;
+    }
+    link.href = `compare.html?team=${encodeURIComponent(CURRENT_TEAM_ID)}`;
+    link.classList.remove("pointer-events-none","opacity-50");
   }
 
   function parseHomeAway(opponent){
