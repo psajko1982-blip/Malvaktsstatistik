@@ -409,11 +409,15 @@
 <!-- Skottkarta / Skott-editor (ny modal) -->
 <div id="shot-editor-modal"
      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[96vh] flex flex-col">
+  <div id="shot-editor-panel" class="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[96vh] flex flex-col">
     <div class="flex items-center justify-between px-6 py-4 border-b">
       <h2 class="text-lg font-semibold">Skottkarta - redigera skott</h2>
-      <button id="shot-editor-close"
-              class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
+      <div class="flex items-center gap-3">
+        <button id="shot-editor-fullscreen"
+                class="text-sm text-gray-500 hover:text-gray-700">Helskärm</button>
+        <button id="shot-editor-close"
+                class="text-sm text-gray-500 hover:text-gray-700">Stäng</button>
+      </div>
     </div>
 
     <div class="px-6 pt-4 pb-3 flex flex-wrap gap-4 items-center border-b">
@@ -2321,7 +2325,10 @@
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const mappedShots = SHOT_EDITOR_SHOTS.map(s => mapShotForDisplay(s, SHOT_EDITOR_OUR_RIGHT_P1));
+  const mappedShots = SHOT_EDITOR_SHOTS.map((s, idx) => ({
+    ...mapShotForDisplay(s, SHOT_EDITOR_OUR_RIGHT_P1),
+    __idx: idx
+  }));
 
   // ----- BAKGRUND / RINK -----
   ctx.clearRect(0, 0, W, H);
@@ -2401,6 +2408,14 @@
     ctx.arc(cx, cy, 5, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
+
+    if (SHOT_EDITOR_SELECTED_IDX === s.__idx){
+      ctx.beginPath();
+      ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+      ctx.strokeStyle = "#111827";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   });
 
   // ----- LISTA MED SKOTT (samma som tidigare) -----
@@ -2676,6 +2691,24 @@
     $("#shot-editor-close").onclick  = closeShotEditor;
     $("#shot-editor-cancel").onclick = closeShotEditor;
     $("#shot-editor-save").onclick   = saveShotEditor;
+    const fsBtn = $("#shot-editor-fullscreen");
+    if (fsBtn){
+      fsBtn.onclick = () => {
+        const panel = $("#shot-editor-panel");
+        if (!panel) return;
+        const isFull = panel.classList.contains("max-w-none");
+        if (isFull){
+          panel.classList.remove("max-w-none","max-h-none","h-screen","w-screen","rounded-none");
+          panel.classList.add("max-w-4xl","max-h-[96vh]","rounded-xl");
+          fsBtn.textContent = "Helskärm";
+        } else {
+          panel.classList.remove("max-w-4xl","max-h-[96vh]","rounded-xl");
+          panel.classList.add("max-w-none","max-h-none","h-screen","w-screen","rounded-none");
+          fsBtn.textContent = "Avsluta helskärm";
+        }
+        renderShotEditor();
+      };
+    }
     const applyBtn = $("#shot-editor-apply");
     if (applyBtn){
       applyBtn.onclick = () => {
