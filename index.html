@@ -1063,10 +1063,10 @@
     const ext = (file.name.split(".").pop() || "png").toLowerCase();
     const path = `${CURRENT_TEAM_ID}.${ext}`;
     const { error } = await supabaseClient.storage
-      .from("team-logos")
+      .from("team_logos")
       .upload(path, file, { upsert: true, cacheControl: "3600" });
     if (error) throw error;
-    const url = `${SUPABASE_URL}/storage/v1/object/public/team-logos/${encodeURIComponent(path)}`;
+    const url = `${SUPABASE_URL}/storage/v1/object/public/team_logos/${encodeURIComponent(path)}`;
     await dbUpdateTeam(CURRENT_TEAM_ID, { logo_url: url });
     if (CURRENT_TEAM) CURRENT_TEAM.logo_url = url;
     renderTeamLogo(CURRENT_TEAM);
